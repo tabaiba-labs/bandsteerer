@@ -1,9 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-  <channel>
-    <title>BandSteerer Updates</title>
-    <link>https://github.com/tabaiba-labs/bandsteerer</link>
-    <description>BandSteerer release updates</description>
-    <language>en</language>
-  </channel>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>BandSteerer Updates</title>
+        <link>https://github.com/tabaiba-labs/bandsteerer</link>
+        <description>BandSteerer release updates</description>
+        <language>en</language>
+        <item>
+            <title>0.3.0</title>
+            <pubDate>Sun, 16 Aug 2026 21:23:08 +0800</pubDate>
+            <link>https://github.com/tabaiba-labs/bandsteerer</link>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/tabaiba-labs/bandsteerer/releases/download/v0.3.0/BandSteerer-0.3.0.dmg" length="3400155" type="application/octet-stream" sparkle:edSignature="5kydhu7+mvCbtT/MI8AA78q2tdW5XBL3igtFeCsYE1tOWHFJwSLAu4RS9uqfjyWlLmPBDaZGwc52OseZE2YuBw=="/>
+        </item>
+    </channel>
 </rss>
