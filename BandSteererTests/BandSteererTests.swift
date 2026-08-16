@@ -5,6 +5,48 @@ import Testing
 
 struct BandSteererTests {
   @Test
+  func checksForUpdatesOnLaunchWhenAutomaticChecksAreEnabled() {
+    #expect(UpdateCheckPolicy.shouldCheckOnLaunch(automaticChecksEnabled: true))
+  }
+
+  @Test
+  func respectsDisabledAutomaticChecksOnLaunch() {
+    #expect(!UpdateCheckPolicy.shouldCheckOnLaunch(automaticChecksEnabled: false))
+  }
+
+  @Test
+  func updaterIsConfiguredForDailyChecks() throws {
+    let infoDictionary = try #require(Bundle.main.infoDictionary)
+
+    #expect(infoDictionary["SUEnableAutomaticChecks"] as? Bool == true)
+    #expect(infoDictionary["SUEnableSystemProfiling"] as? Bool == false)
+    #expect(infoDictionary["SUScheduledCheckInterval"] as? Int == 86_400)
+    #expect(
+      infoDictionary["SUFeedURL"] as? String
+        == "https://raw.githubusercontent.com/tabaiba-labs/bandsteerer/main/appcast.xml"
+    )
+  }
+
+  @Test
+  func formatsCurrentVersionAndBuild() {
+    let buildInfo = AppBuildInfo(
+      infoDictionary: [
+        "CFBundleShortVersionString": "0.2.1",
+        "CFBundleVersion": "7",
+      ]
+    )
+
+    #expect(buildInfo.displayText == "Version 0.2.1 (Build 7)")
+  }
+
+  @Test
+  func missingBuildMetadataHasAnExplicitFallback() {
+    let buildInfo = AppBuildInfo(infoDictionary: [:])
+
+    #expect(buildInfo.displayText == "Version Unknown (Build Unknown)")
+  }
+
+  @Test
   func choosesStrongestCandidateInRequestedBand() {
     let candidates = [
       NetworkCandidate(identifier: "2g", band: .twoPointFour, rssi: -30),

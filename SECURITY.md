@@ -10,6 +10,6 @@ Do not put credentials, Wi-Fi identifiers, Keychain exports, crash reports conta
 
 ## Security boundaries
 
-BandSteerer handles Wi-Fi credentials only through Apple Keychain APIs, uses public CoreWLAN APIs, and runs inside the App Sandbox. The app has no privileged helper, remote service, plug-in system, or update mechanism. A valid report may still concern credential access, sandbox entitlements, code signing, release integrity, unsafe logging, or behavior that connects to an unintended access point.
+BandSteerer handles Wi-Fi credentials only through Apple Keychain APIs, uses public CoreWLAN APIs, and runs inside the App Sandbox. The app has no privileged helper, remote service, or plug-in system. Updates use Sparkle's sandboxed installer service and must pass EdDSA signature validation. A valid report may concern credential access, sandbox entitlements, update or code-signing integrity, unsafe logging, or behavior that connects to an unintended access point.
 
 Official binary releases are signed and notarized for macOS Gatekeeper.

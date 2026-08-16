@@ -26,6 +26,11 @@ jobs:
           set -euo pipefail
 
           /usr/bin/plutil -lint BandSteerer/Info.plist BandSteerer/BandSteerer.entitlements
+          /usr/bin/xmllint --noout appcast.xml
+          test -x scripts/create-dmg.sh
+          test -x scripts/generate-appcast.sh
+          /bin/zsh -n scripts/create-dmg.sh
+          /bin/zsh -n scripts/generate-appcast.sh
           /usr/bin/plutil -convert binary1 -o /dev/null -- BandSteerer/Assets.xcassets/Contents.json
           /usr/bin/plutil -convert binary1 -o /dev/null -- BandSteerer/Assets.xcassets/AppIcon.appiconset/Contents.json
 
@@ -121,11 +126,20 @@ jobs:
           app="$RUNNER_TEMP/BandSteererDerivedData/Build/Products/Release/BandSteerer.app"
           executable="$app/Contents/MacOS/BandSteerer"
           entitlements="$RUNNER_TEMP/BandSteerer.entitlements.txt"
+          sparkle="$app/Contents/Frameworks/Sparkle.framework/Versions/Current"
 
           test -f "$app/Contents/Resources/AppIcon.icns"
+          test -x "$sparkle/Autoupdate"
+          test -x "$sparkle/XPCServices/Installer.xpc/Contents/MacOS/Installer"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :SUEnableAutomaticChecks' "$app/Contents/Info.plist")" = true
+          test "$(/usr/libexec/PlistBuddy -c 'Print :SUEnableSystemProfiling' "$app/Contents/Info.plist")" = false
+          test "$(/usr/libexec/PlistBuddy -c 'Print :SUScheduledCheckInterval' "$app/Contents/Info.plist")" = 86400
+          test "$(/usr/libexec/PlistBuddy -c 'Print :SUEnableInstallerLauncherService' "$app/Contents/Info.plist")" = true
           test "$(lipo -archs "$executable")" = 'x86_64 arm64'
           codesign --verify --deep --strict "$app"
           codesign -d --entitlements - "$app" > "$entitlements"
+          /usr/bin/grep -Fq 'org.bandsteerer.BandSteerer-spks' "$entitlements"
+          /usr/bin/grep -Fq 'org.bandsteerer.BandSteerer-spki' "$entitlements"
           if /usr/bin/grep -Fq 'com.apple.security.get-task-allow' "$entitlements"; then
             print -u2 'Release product contains the development get-task-allow entitlement.'
             exit 1

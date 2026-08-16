@@ -13,8 +13,9 @@ BandSteerer is a native macOS menu-bar utility for choosing the 2.4 GHz or 5 GHz
 - BandSteerer corrects a connection only when macOS moves to the wrong band. Moving between access points within the selected band requires no intervention.
 - Sleep pauses connection checks. After wake, the app waits for Wi-Fi to reconnect before restoring the preference for the same network.
 - **Open at Login** can restore saved preferences automatically after signing in.
+- A silent update check runs when the app starts and then once every 24 hours while it remains open. Available updates use the native Sparkle install and relaunch flow.
 
-BandSteerer is built with public macOS frameworks and has no third-party dependencies, analytics, updater, root helper, private framework, or application-level internet service. It runs in the App Sandbox.
+BandSteerer is built with public macOS frameworks and Sparkle 2 for updates. It has no analytics, root helper, private framework, or application service. It runs in the App Sandbox.
 
 ## Requirements
 

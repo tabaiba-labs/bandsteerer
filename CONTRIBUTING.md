@@ -1,6 +1,6 @@
 # Contributing
 
-BandSteerer intentionally stays small and native. Changes should use public Apple APIs, preserve the App Sandbox, avoid third-party dependencies unless there is a compelling and documented need, and keep automatic mode free of recurring work.
+BandSteerer intentionally stays small and native. Changes should use public Apple APIs, preserve the App Sandbox, avoid third-party dependencies beyond the narrowly scoped Sparkle updater unless there is a compelling and documented need, and keep automatic mode free of recurring Wi-Fi work.
 
 Participation is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). The component boundaries and invariants are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -28,3 +28,7 @@ No Apple account is required for local tests and builds. Keep signing configurat
 - Follow the Swift API Design Guidelines. Use `xcrun swift format --in-place --recursive BandSteerer BandSteererTests` when Swift files changed, then repeat the checks above.
 
 Hardware validation is required for changes to scanning, association, password lookup, sleep/wake recovery, or login-item behavior because those paths depend on macOS services and cannot be fully exercised by unit tests.
+
+## Publishing updates
+
+The signed release and appcast procedure is documented in [docs/UPDATES.md](docs/UPDATES.md). Never commit or paste the Sparkle private key into an issue, pull request, workflow, shell history, or repository file.

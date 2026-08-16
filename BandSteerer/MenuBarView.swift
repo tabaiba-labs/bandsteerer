@@ -1,11 +1,14 @@
 import SwiftUI
 
 struct MenuBarView: View {
+  @Environment(\.openWindow) private var openWindow
   @ObservedObject var model: AppModel
+  @ObservedObject var updates: UpdateController
   @ObservedObject private var locationPermission: LocationPermission
 
-  init(model: AppModel) {
+  init(model: AppModel, updates: UpdateController) {
     self.model = model
+    self.updates = updates
     locationPermission = model.locationPermission
   }
 
@@ -20,6 +23,16 @@ struct MenuBarView: View {
       }
 
       Divider()
+
+      Button("About BandSteerer") {
+        openWindow(id: "about")
+        NSApplication.shared.activate(ignoringOtherApps: true)
+      }
+
+      Button("Check for Updates…") {
+        updates.checkForUpdates()
+      }
+      .disabled(!updates.canCheckForUpdates)
 
       Toggle(
         "Open at Login",

@@ -1,6 +1,6 @@
 # Privacy
 
-BandSteerer performs its work locally. It contains no analytics SDK, advertising SDK, crash-reporting service, updater, telemetry endpoint, or application-level internet request.
+BandSteerer performs its Wi-Fi work locally. It contains no analytics SDK, advertising SDK, crash-reporting service, or telemetry endpoint. Its only application-level internet access is the update flow described below.
 
 ## Data used while the app is running
 
@@ -37,4 +37,8 @@ BandSteerer uses Apple unified logging for lifecycle and failure diagnostics. Lo
 
 ## Network access and sandboxing
 
-The application has the App Sandbox, outgoing network-client, and Location entitlements. CoreWLAN communicates with macOS system services through the sandbox. BandSteerer itself defines no remote host, HTTP client, analytics transport, or update channel.
+The application has the App Sandbox, outgoing network-client, Location, and Sparkle installer communication entitlements. CoreWLAN communicates with macOS system services through the sandbox.
+
+At launch and no more than once every 24 hours while running, Sparkle requests the public update feed from `raw.githubusercontent.com`. If an update is available and the user accepts it, Sparkle downloads the signed release archive from the URL in that feed, currently a GitHub Release. These requests necessarily expose normal network metadata such as the device's public IP address to GitHub. BandSteerer does not add an account identifier, Wi-Fi data, credential, or analytics event to the request, and Sparkle's optional system profiling is explicitly disabled.
+
+Sparkle verifies release archives with BandSteerer's EdDSA public key before installing them. The private signing key is not included in the app or repository.

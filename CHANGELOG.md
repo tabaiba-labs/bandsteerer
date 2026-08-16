@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-08-16
+
 ### Changed
 
 - Migrated the app to a native Xcode project with a shared build and test scheme.
@@ -15,6 +17,7 @@
 - Per-network band preferences that survive disconnects, app launches, and Mac reboots without storing plaintext SSIDs.
 - Privacy, security, contribution, and architecture documentation.
 - A complete macOS app-icon asset catalog generated from the supplied icon.
+- Signed Sparkle updates with a silent check at app launch, daily scheduled checks, and a manual **Check for Updates…** action.
 
 ## 0.2.1
 

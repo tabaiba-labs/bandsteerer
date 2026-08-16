@@ -36,5 +36,17 @@
     <string>BandSteerer needs this permission so macOS can reveal Wi-Fi network information. It never reads, stores, or transmits geographic coordinates.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUEnableInstallerLauncherService</key>
+    <true/>
+    <key>SUEnableSystemProfiling</key>
+    <false/>
+    <key>SUFeedURL</key>
+    <string>https://raw.githubusercontent.com/tabaiba-labs/bandsteerer/main/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>7FqMoM0YZPqWscelXAhcCsVV234O55GjA9USn4kp62A=</string>
+    <key>SUScheduledCheckInterval</key>
+    <integer>86400</integer>
 </dict>
 </plist>

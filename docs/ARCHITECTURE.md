@@ -1,11 +1,13 @@
 # Architecture
 
-BandSteerer is a single-process SwiftUI menu-bar app built as a native Xcode macOS application. It deliberately has no dependency layer, background helper, database, or remote service.
+BandSteerer is a single-process SwiftUI menu-bar app built as a native Xcode macOS application. It deliberately has no application dependency layer, database, or remote service. Sparkle's bundled sandbox installer service performs user-approved app replacement.
 
 ## Components
 
-- `BandSteererApp` declares the native `MenuBarExtra` scene.
+- `BandSteererApp` declares the native `MenuBarExtra` and single-instance About window scenes.
+- `AboutView` explains the utility and reads its displayed version and build from the app bundle.
 - `MenuBarView` renders current connection state and user actions.
+- `UpdateController` starts Sparkle with the app, makes the requested launch check without overriding a user's saved automatic-check preference, and exposes the manual check action.
 - `AppModel` owns the main-actor session state, lifecycle notifications, bounded monitoring tasks, retry backoff, and login-item registration.
 - `BandPreferenceStore` persists the explicit band choice for each hashed SSID identifier in `UserDefaults`.
 - `WiFiService` serializes blocking CoreWLAN reads, scans, Keychain lookup, and association work on one dispatch queue.
@@ -16,8 +18,9 @@ BandSteerer is a single-process SwiftUI menu-bar app built as a native Xcode mac
 ## Project structure
 
 - `BandSteerer.xcodeproj` and its shared scheme are the only build definition.
-- The project has no package-manager dependencies or parallel build system.
+- Sparkle 2 is the sole Swift Package Manager dependency. The project has no parallel build system.
 - `Assets.xcassets` contains the compiled macOS app icon. The menu-bar label uses an SF Symbol and is independent of the application icon.
+- `appcast.xml` is the static update feed. It contains only release metadata and EdDSA signatures; release archives live in GitHub Releases.
 - Continuous integration tests, analyzes, and builds the shared scheme.
 
 ## State flow
@@ -34,5 +37,6 @@ Association requests carry a monotonically increasing generation. Cancelling an 
 - Keep CoreWLAN work off the main actor and serialized.
 - Use only public Apple APIs and declared sandbox entitlements.
 - Keep Automatic mode free of recurring monitoring.
+- Never publish an update archive without a Sparkle EdDSA signature, and never put the private signing key in the repository.
 
 Changes that cross one of these boundaries require corresponding tests, `PRIVACY.md` and `SECURITY.md` updates, and hardware validation.
