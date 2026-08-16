@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate repository metadata and privacy
+        shell: /bin/zsh -e {0}
+        run: |
+          set -euo pipefail
+
+          /usr/bin/plutil -lint BandSteerer/Info.plist BandSteerer/BandSteerer.entitlements
+          /usr/bin/plutil -convert binary1 -o /dev/null -- BandSteerer/Assets.xcassets/Contents.json
+          /usr/bin/plutil -convert binary1 -o /dev/null -- BandSteerer/Assets.xcassets/AppIcon.appiconset/Contents.json
+
+          generated_files="$(git ls-files | /usr/bin/grep -E '(^|/)(DerivedData|build)(/|$)|\.xcarchive(/|$)|\.dSYM(/|$)|\.xcuserstate$|(^|/)xcuserdata(/|$)' || true)"
+          if [[ -n "$generated_files" ]]; then
+            print -u2 "Generated or per-user Xcode files are tracked."
+            exit 1
+          fi
+
+          privacy_patterns=(
+            '/Users/[^/${}[:space:]]+'
+            '/home/[^/${}[:space:]]+'
+            '-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----'
+            'AKIA[0-9A-Z]{16}'
+            'gh[pousr]_[A-Za-z0-9_]{20,}'
+            'github_pat_[A-Za-z0-9_]{20,}'
+            'https?://[^/[:space:]@]+:[^/[:space:]@]+@'
+            'DEVELOPMENT_TEAM[[:space:]]*=[[:space:]]*[A-Z0-9]{10}'
+            'PROVISIONING_PROFILE_SPECIFIER[[:space:]]*=[[:space:]]*[^";[:space:]]+'
+            'Developer ID Application: [^";]+\([A-Z0-9]{10}\)'
+          )
+          for pattern in "${privacy_patterns[@]}"; do
+            if git grep -IqE -e "$pattern" -- . ':(exclude).github/workflows/ci.yml'; then
+              print -u2 "Possible private or account-specific data found."
+              exit 1
+            else
+              grep_status=$?
+              if (( grep_status != 1 )); then
+                exit "$grep_status"
+              fi
+            fi
+          done
+
+          email_pattern='[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}'
+          if git grep -IqE -e "$email_pattern" -- . \
+            ':(exclude).github/workflows/ci.yml' \
+            ':(exclude)BandSteerer/Assets.xcassets/AppIcon.appiconset/Contents.json'
+          then
+            print -u2 "Possible private or account-specific email address found."
+            exit 1
+          else
+            grep_status=$?
+            if (( grep_status != 1 )); then
+              exit "$grep_status"
+            fi
+          fi
+
+      - name: Check Swift formatting
+        run: xcrun swift format lint --recursive BandSteerer BandSteererTests --strict
+
+      - name: Run tests
+        run: |
+          xcodebuild \
+            -project BandSteerer.xcodeproj \
+            -scheme BandSteerer \
+            -derivedDataPath "$RUNNER_TEMP/BandSteererDerivedData" \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY=- \
+            DEVELOPMENT_TEAM= \
+            test
+
+      - name: Analyze
+        run: |
+          xcodebuild \
+            -project BandSteerer.xcodeproj \
+            -scheme BandSteerer \
+            -derivedDataPath "$RUNNER_TEMP/BandSteererDerivedData" \
+            -configuration Debug \
+            -destination 'generic/platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            analyze
+
+      - name: Build and inspect universal Release app
+        shell: /bin/zsh -e {0}
+        run: |
+          set -euo pipefail
+
+          xcodebuild \
+            -project BandSteerer.xcodeproj \
+            -scheme BandSteerer \
+            -derivedDataPath "$RUNNER_TEMP/BandSteererDerivedData" \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            ARCHS='arm64 x86_64' \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY=- \
+            DEVELOPMENT_TEAM= \
+            build
+
+          app="$RUNNER_TEMP/BandSteererDerivedData/Build/Products/Release/BandSteerer.app"
+          executable="$app/Contents/MacOS/BandSteerer"
+          entitlements="$RUNNER_TEMP/BandSteerer.entitlements.txt"
+
+          test -f "$app/Contents/Resources/AppIcon.icns"
+          test "$(lipo -archs "$executable")" = 'x86_64 arm64'
+          codesign --verify --deep --strict "$app"
+          codesign -d --entitlements - "$app" > "$entitlements"
+          if /usr/bin/grep -Fq 'com.apple.security.get-task-allow' "$entitlements"; then
+            print -u2 'Release product contains the development get-task-allow entitlement.'
+            exit 1
+          fi
+          if strings "$executable" | /usr/bin/grep -Eq '(/Users/|/home/|/Applications/Xcode[^/]*/Contents/Developer)'; then
+            print -u2 'Release executable contains a local build-machine path.'
+            exit 1
+          fi
