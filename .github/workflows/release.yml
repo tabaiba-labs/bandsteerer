@@ -23,7 +23,7 @@ jobs:
           persist-credentials: false
 
       - name: Validate tag and release credentials
-        shell: zsh
+        shell: /bin/zsh -e {0}
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -58,7 +58,7 @@ jobs:
           fi
 
       - name: Import Developer ID identity
-        shell: zsh
+        shell: /bin/zsh -e {0}
         env:
           DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
           DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
@@ -100,7 +100,7 @@ jobs:
           /bin/rm -f "$certificate"
 
       - name: Build signed universal app
-        shell: zsh
+        shell: /bin/zsh -e {0}
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
@@ -135,7 +135,7 @@ jobs:
           fi
 
       - name: Create drag-and-drop DMG
-        shell: zsh
+        shell: /bin/zsh -e {0}
         run: |
           set -euo pipefail
 
@@ -161,7 +161,7 @@ jobs:
           print "DMG_NAME=${dmg:t}" >> "$GITHUB_ENV"
 
       - name: Notarize and staple DMG
-        shell: zsh
+        shell: /bin/zsh -e {0}
         env:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -192,7 +192,7 @@ jobs:
           xcrun stapler validate "$DMG_PATH"
 
       - name: Verify mounted distribution
-        shell: zsh
+        shell: /bin/zsh -e {0}
         run: |
           set -euo pipefail
 
@@ -216,7 +216,7 @@ jobs:
           /usr/bin/shasum -a 256 "$DMG_NAME" > "$DMG_NAME.sha256"
 
       - name: Publish GitHub release
-        shell: zsh
+        shell: /bin/zsh -e {0}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -231,7 +231,7 @@ jobs:
 
       - name: Remove temporary signing material
         if: always()
-        shell: zsh
+        shell: /bin/zsh -e {0}
         run: |
           /usr/bin/security delete-keychain "$RUNNER_TEMP/BandSteerer.keychain-db" 2>/dev/null || true
           /bin/rm -f \

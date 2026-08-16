@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
 
       - name: Validate repository metadata and privacy
-        shell: zsh
+        shell: /bin/zsh -e {0}
         run: |
           set -euo pipefail
 
@@ -102,7 +102,7 @@ jobs:
             analyze
 
       - name: Build and inspect universal Release app
-        shell: zsh
+        shell: /bin/zsh -e {0}
         run: |
           set -euo pipefail
 
