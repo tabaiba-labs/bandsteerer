@@ -35,9 +35,8 @@ body:
     attributes:
       label: Installation method
       options:
-        - Published notarized release
-        - Built and run from Xcode
-        - Archived and exported from Xcode
+        - GitHub release
+        - Built from source
         - Other
     validations:
       required: true

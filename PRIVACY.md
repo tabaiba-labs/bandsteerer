@@ -27,7 +27,7 @@ After a successful association, BandSteerer saves a copy as a generic-password i
 - the item is marked `WhenUnlockedThisDeviceOnly`, so it is available only while the Keychain is unlocked and does not migrate to another device;
 - the password is cached in process memory only for the current SSID.
 
-The copy allows background corrections to reconnect without repeated authorization prompts. It is never stored in the repository, app bundle, preferences, logs, or cloud storage by BandSteerer.
+The copy allows background corrections to reconnect without repeated authorization prompts. BandSteerer does not write it to app preferences, logs, or cloud storage.
 
 Uninstalling a macOS app does not automatically delete its Keychain items. To remove BandSteerer’s copies, open **Keychain Access**, search for **BandSteerer Wi-Fi credential**, and delete the matching generic-password items. This does not delete the Wi-Fi passwords maintained by macOS for joining those networks.
 
@@ -38,9 +38,3 @@ BandSteerer uses Apple unified logging for lifecycle and failure diagnostics. Lo
 ## Network access and sandboxing
 
 The application has the App Sandbox, outgoing network-client, and Location entitlements. CoreWLAN communicates with macOS system services through the sandbox. BandSteerer itself defines no remote host, HTTP client, analytics transport, or update channel.
-
-## Source and release privacy checks
-
-Continuous integration scans the checked-out source for common absolute home paths, email addresses, private-key markers, access-token formats, embedded URL credentials, concrete Developer ID subjects, development-team identifiers, provisioning-profile settings, generated products, and Xcode user-state files. Repository maintainers should also enable GitHub secret scanning so the complete published history is covered.
-
-Continuous integration builds a universal Release product and rejects unexpected architectures, missing signatures, absent compiled icons, development entitlements, home-directory paths, and developer-tool runtime paths. These checks reduce accidental disclosure; maintainers should still review changes and use a dedicated secret scanner before importing an existing repository history from elsewhere.

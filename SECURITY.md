@@ -12,4 +12,4 @@ Do not put credentials, Wi-Fi identifiers, Keychain exports, crash reports conta
 
 BandSteerer handles Wi-Fi credentials only through Apple Keychain APIs, uses public CoreWLAN APIs, and runs inside the App Sandbox. The app has no privileged helper, remote service, plug-in system, or update mechanism. A valid report may still concern credential access, sandbox entitlements, code signing, release integrity, unsafe logging, or behavior that connects to an unintended access point.
 
-Public binary releases are expected to pass the repository checks, Developer ID signature verification, Apple notarization and stapling, and Gatekeeper assessment. Release checksums must be published alongside the archive.
+Official binary releases are signed and notarized for macOS Gatekeeper.

@@ -9,8 +9,8 @@ Describe the user-visible behavior and why this is the smallest complete change.
 - [ ] The `verify` GitHub Actions job passes.
 - [ ] Tests cover changed selection or policy behavior.
 - [ ] Hardware-dependent behavior was tested on the stated macOS version and architecture, or the pull request explains why it was not applicable.
-- [ ] No SSID, BSSID, credential, account identifier, personal path, signing identity, or generated artifact was added.
-- [ ] Privacy, security, entitlements, compatibility, and release documentation were updated when applicable.
+- [ ] No SSID, BSSID, credential, private identifier, personal path, or generated Xcode file was added.
+- [ ] Privacy, security, entitlements, and compatibility documentation were updated when applicable.
 
 ## Hardware validation
 
