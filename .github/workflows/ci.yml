@@ -15,8 +15,6 @@ jobs:
   verify:
     runs-on: macos-15
     timeout-minutes: 30
-    env:
-      DERIVED_DATA: ${{ runner.temp }}/BandSteererDerivedData
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -84,7 +82,7 @@ jobs:
           xcodebuild \
             -project BandSteerer.xcodeproj \
             -scheme BandSteerer \
-            -derivedDataPath "$DERIVED_DATA" \
+            -derivedDataPath "$RUNNER_TEMP/BandSteererDerivedData" \
             -configuration Debug \
             -destination 'platform=macOS' \
             CODE_SIGN_STYLE=Manual \
@@ -97,7 +95,7 @@ jobs:
           xcodebuild \
             -project BandSteerer.xcodeproj \
             -scheme BandSteerer \
-            -derivedDataPath "$DERIVED_DATA" \
+            -derivedDataPath "$RUNNER_TEMP/BandSteererDerivedData" \
             -configuration Debug \
             -destination 'generic/platform=macOS' \
             CODE_SIGNING_ALLOWED=NO \
@@ -111,7 +109,7 @@ jobs:
           xcodebuild \
             -project BandSteerer.xcodeproj \
             -scheme BandSteerer \
-            -derivedDataPath "$DERIVED_DATA" \
+            -derivedDataPath "$RUNNER_TEMP/BandSteererDerivedData" \
             -configuration Release \
             -destination 'generic/platform=macOS' \
             ARCHS='arm64 x86_64' \
@@ -121,7 +119,7 @@ jobs:
             DEVELOPMENT_TEAM= \
             build
 
-          app="$DERIVED_DATA/Build/Products/Release/BandSteerer.app"
+          app="$RUNNER_TEMP/BandSteererDerivedData/Build/Products/Release/BandSteerer.app"
           executable="$app/Contents/MacOS/BandSteerer"
           entitlements="$RUNNER_TEMP/BandSteerer.entitlements.txt"
 

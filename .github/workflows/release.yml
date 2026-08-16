@@ -17,9 +17,6 @@ jobs:
     name: Signed and notarized DMG
     runs-on: macos-15
     timeout-minutes: 45
-    env:
-      DERIVED_DATA: ${{ runner.temp }}/BandSteererDerivedData
-      DIST_DIR: ${{ runner.temp }}/BandSteererDistribution
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -112,7 +109,7 @@ jobs:
           xcodebuild \
             -project BandSteerer.xcodeproj \
             -scheme BandSteerer \
-            -derivedDataPath "$DERIVED_DATA" \
+            -derivedDataPath "$RUNNER_TEMP/BandSteererDerivedData" \
             -configuration Release \
             -destination 'generic/platform=macOS' \
             ARCHS='arm64 x86_64' \
@@ -123,7 +120,7 @@ jobs:
             OTHER_CODE_SIGN_FLAGS='--timestamp' \
             build
 
-          app="$DERIVED_DATA/Build/Products/Release/BandSteerer.app"
+          app="$RUNNER_TEMP/BandSteererDerivedData/Build/Products/Release/BandSteerer.app"
           executable="$app/Contents/MacOS/BandSteerer"
           version="${GITHUB_REF_NAME#v}"
           built_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")"
@@ -143,11 +140,12 @@ jobs:
           set -euo pipefail
 
           version="${GITHUB_REF_NAME#v}"
-          app="$DERIVED_DATA/Build/Products/Release/BandSteerer.app"
+          app="$RUNNER_TEMP/BandSteererDerivedData/Build/Products/Release/BandSteerer.app"
           staging="$RUNNER_TEMP/BandSteererDMG"
-          dmg="$DIST_DIR/BandSteerer-$version.dmg"
+          dist_dir="$RUNNER_TEMP/BandSteererDistribution"
+          dmg="$dist_dir/BandSteerer-$version.dmg"
 
-          /bin/mkdir -p "$staging" "$DIST_DIR"
+          /bin/mkdir -p "$staging" "$dist_dir"
           /usr/bin/ditto "$app" "$staging/BandSteerer.app"
           /bin/ln -s /Applications "$staging/Applications"
           /usr/bin/hdiutil create \
@@ -214,7 +212,7 @@ jobs:
           spctl --assess --type execute --verbose=2 "$app"
           spctl --assess --type open --context context:primary-signature --verbose=2 "$DMG_PATH"
 
-          cd "$DIST_DIR"
+          cd "$RUNNER_TEMP/BandSteererDistribution"
           /usr/bin/shasum -a 256 "$DMG_NAME" > "$DMG_NAME.sha256"
 
       - name: Publish GitHub release
@@ -225,8 +223,8 @@ jobs:
           set -euo pipefail
 
           gh release create "$GITHUB_REF_NAME" \
-            "$DIST_DIR/$DMG_NAME#BandSteerer for macOS" \
-            "$DIST_DIR/$DMG_NAME.sha256#SHA-256 checksum" \
+            "$RUNNER_TEMP/BandSteererDistribution/$DMG_NAME#BandSteerer for macOS" \
+            "$RUNNER_TEMP/BandSteererDistribution/$DMG_NAME.sha256#SHA-256 checksum" \
             --verify-tag \
             --generate-notes \
             --title "BandSteerer ${GITHUB_REF_NAME#v}"
