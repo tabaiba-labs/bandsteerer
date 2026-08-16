@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose a focused improvement to BandSteerer
+title: "Feature: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the concrete user problem without including private network details.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Explain what should happen from the user’s point of view.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Project fit
+      options:
+        - label: This can use public Apple APIs and preserve the App Sandbox.
+          required: true
+        - label: This does not require analytics, a remote service, or a privileged helper.
+          required: true
