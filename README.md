@@ -4,6 +4,8 @@
 
 BandSteerer is a native macOS menu-bar utility for choosing the 2.4 GHz or 5 GHz band of the Wi-Fi network you are already using. It is useful when one network name is broadcast by several access points or frequency bands and macOS has roamed to an unsuitable band.
 
+![BandSteerer menu with the 5 GHz preference active](docs/images/bandsteerer-menu.png)
+
 ## Features
 
 - **Automatic** leaves Wi-Fi roaming to macOS.
