@@ -7,12 +7,14 @@ BandSteerer performs its Wi-Fi work locally. It contains no analytics SDK, adver
 BandSteerer reads these values from Apple’s CoreWLAN framework:
 
 - the current Wi-Fi interface power and connection state;
-- the current SSID, channel, signal strength, and negotiated transmit rate;
+- the current SSID, channel, and signal strength;
 - scan results for the current SSID, including BSSID, band, and signal strength, when a band switch is necessary.
 
 The current SSID and radio details are held in memory and shown in the menu. Scan-result BSSIDs are used transiently to rank access points and are not retained in application state.
 
-When the user selects an explicit band, BandSteerer stores the band and a SHA-256 identifier derived from the SSID in the app's standard local `UserDefaults`. This lets the preference survive app launches and Mac reboots without storing the plaintext SSID. Choosing Automatic removes that network's entry. These identifiers and preferences are not written to logs or sent to a network service.
+After BandSteerer successfully applies an explicit band selected by the user, it stores the band and a SHA-256 identifier derived from the SSID in the app's standard local `UserDefaults`. This lets the preference survive app launches and Mac reboots without storing the plaintext SSID. Choosing Automatic removes that network's entry. These identifiers and preferences are not written to logs or sent to a network service.
+
+The **Reset Saved Preferences…** action in the About window removes all of these identifiers and band choices from `UserDefaults` and returns the current session to Automatic. It does not remove Wi-Fi credentials or change macOS network settings.
 
 BandSteerer creates a `CLLocationManager` only to request and observe authorization. It does not start location updates, request a location, or receive geographic coordinates. macOS requires the permission before CoreWLAN reveals SSID and BSSID information.
 

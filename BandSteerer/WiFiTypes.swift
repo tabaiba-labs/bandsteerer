@@ -31,14 +31,6 @@ enum BandPreference: String, CaseIterable, Identifiable, Sendable {
     }
   }
 
-  var shortTitle: String {
-    switch self {
-    case .automatic: "Auto"
-    case .twoPointFour: "2.4"
-    case .five: "5"
-    }
-  }
-
   var band: WiFiBand? {
     switch self {
     case .automatic: nil
@@ -48,18 +40,79 @@ enum BandPreference: String, CaseIterable, Identifiable, Sendable {
   }
 }
 
+enum PreferenceRestorationPolicy {
+  static func effectivePreference(
+    savedPreference: BandPreference,
+    canApplyWithoutUserInteraction: Bool
+  ) -> BandPreference {
+    if savedPreference == .automatic || canApplyWithoutUserInteraction {
+      return savedPreference
+    }
+    return .automatic
+  }
+}
+
 struct WiFiConnection: Equatable, Sendable {
   var ssid: String?
   var band: WiFiBand = .unknown
   var channel: Int?
   var rssi: Int?
-  var transmitRate: Double?
   var isPoweredOn = false
   var isInterfaceAvailable = false
 
   static let disconnected = WiFiConnection()
 
   var isConnected: Bool { ssid != nil }
+}
+
+struct MenuBarPresentation: Equatable {
+  let systemImage: String
+  let bandText: String?
+  let accessibilityLabel: LocalizedStringResource
+
+  init(
+    isLocationAuthorized: Bool,
+    connection: WiFiConnection,
+    preference: BandPreference,
+    isWorking: Bool,
+    isRecoveringFromWake: Bool
+  ) {
+    let activeBandText = preference == .automatic ? nil : preference.title
+
+    if !isLocationAuthorized {
+      systemImage = "wifi.slash"
+      bandText = nil
+      accessibilityLabel = "BandSteerer needs Location access"
+    } else if !connection.isInterfaceAvailable {
+      systemImage = "wifi.slash"
+      bandText = nil
+      accessibilityLabel = "BandSteerer cannot read the Wi-Fi interface"
+    } else if !connection.isPoweredOn {
+      systemImage = "wifi.slash"
+      bandText = nil
+      accessibilityLabel = "Wi-Fi is off"
+    } else if !connection.isConnected {
+      systemImage = "wifi.slash"
+      bandText = nil
+      accessibilityLabel = "Wi-Fi is not connected"
+    } else if preference == .automatic {
+      systemImage = "wifi"
+      bandText = nil
+      accessibilityLabel = "BandSteerer is using Automatic mode"
+    } else if isRecoveringFromWake {
+      systemImage = "wifi.exclamationmark"
+      bandText = activeBandText
+      accessibilityLabel = "BandSteerer is checking Wi-Fi after wake"
+    } else if isWorking || preference.band != connection.band {
+      systemImage = "wifi.exclamationmark"
+      bandText = activeBandText
+      accessibilityLabel = "BandSteerer is restoring the \(preference.title) preference"
+    } else {
+      systemImage = "wifi"
+      bandText = activeBandText
+      accessibilityLabel = "BandSteerer has the \(preference.title) preference active"
+    }
+  }
 }
 
 struct NetworkCandidate: Equatable, Sendable {
@@ -90,6 +143,14 @@ enum CorrectionPolicy {
     let delays: [TimeInterval] = [15, 30, 60, 120]
     let index = min(max(failureCount, 1) - 1, delays.count - 1)
     return delays[index]
+  }
+}
+
+enum MenuMessagePolicy {
+  static let expirationInterval: TimeInterval = 60
+
+  static func isExpired(shownAt: Date, now: Date) -> Bool {
+    now.timeIntervalSince(shownAt) >= expirationInterval
   }
 }
 

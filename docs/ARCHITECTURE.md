@@ -4,7 +4,7 @@ BandSteerer is a single-process SwiftUI menu-bar app built as a native Xcode mac
 
 ## Components
 
-- `BandSteererApp` declares the native `MenuBarExtra` and single-instance About window scenes.
+- `BandSteererApp` declares the native `MenuBarExtra`, its stateful accessible label, and the single-instance About window scene.
 - `AboutView` explains the utility and reads its displayed version and build from the app bundle.
 - `MenuBarView` renders current connection state and user actions.
 - `UpdateController` starts Sparkle with the app, makes the requested launch check without overriding a user's saved automatic-check preference, and exposes the manual check action.
@@ -25,9 +25,13 @@ BandSteerer is a single-process SwiftUI menu-bar app built as a native Xcode mac
 
 ## State flow
 
-An explicit preference belongs to the observed SSID and is restored when that SSID reconnects, including after an app launch or Mac reboot. Disconnect resets only the in-memory session to Automatic; choosing Automatic while connected deletes that network's saved preference. While a preference is active, a ten-second read checks the channel. A mismatch schedules a two-second delayed correction, and CoreWLAN scanning begins only if the mismatch remains.
+An explicit preference belongs to the observed SSID and is persisted after a successful association. When that SSID reconnects, including after an app launch or Mac reboot, the preference is restored only if CoreWLAN does not require administrator authorization and an open network or app-owned credential makes association possible without user interaction. Otherwise the session remains Automatic until the user chooses a band. Disconnect resets only the in-memory session to Automatic; choosing Automatic while connected deletes that network's saved preference. While a preference is active, a ten-second read checks the channel. A mismatch schedules a two-second delayed correction, and CoreWLAN scanning begins only if the mismatch remains.
+
+The menu-bar label reflects only state the app already observes: Automatic stays a plain Wi-Fi symbol during normal use and wake recovery, an explicit preference adds its band and exposes correction state, and unavailable Wi-Fi or permission states show a slash. It does not introduce polling in Automatic mode. Resetting saved preferences clears the preference store, cancels active correction work, and returns the current session to Automatic without changing macOS network settings.
 
 Association requests carry a monotonically increasing generation. Cancelling an older task invalidates its generation, preventing a blocking CoreWLAN operation that returns late from overwriting newer UI or session state. Sleep also invalidates the current association before wake recovery begins.
+
+Only a temporarily missing target band or a post-association verification mismatch keeps an explicit preference active after an association failure. Credential, authorization, unsupported-network, and unknown failures return the session to Automatic and clear the unusable saved preference.
 
 ## Security and privacy invariants
 

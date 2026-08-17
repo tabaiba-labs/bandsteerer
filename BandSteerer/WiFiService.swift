@@ -41,7 +41,19 @@ enum WiFiServiceError: LocalizedError {
   }
 }
 
+enum AssociationFailurePolicy {
+  static func keepsPreferenceActive(after error: Error) -> Bool {
+    (error as? WiFiServiceError)?.keepsPreferenceActive == true
+  }
+}
+
 final class WiFiService: @unchecked Sendable {
+  private enum CredentialRequirement {
+    case none
+    case password
+    case unsupported
+  }
+
   private static let logger = Logger(
     subsystem: AppIdentity.bundleIdentifier,
     category: "WiFi"
@@ -101,6 +113,34 @@ final class WiFiService: @unchecked Sendable {
     }
   }
 
+  func canApplySavedPreferenceWithoutUserInteraction(for ssid: String) async -> Bool {
+    await withCheckedContinuation { continuation in
+      operationQueue.async { [self] in
+        guard
+          let interface = Self.currentInterface(client),
+          let configuration = interface.configuration(),
+          !configuration.requireAdministratorForAssociation,
+          interface.ssid() == ssid,
+          let ssidData = interface.ssidData()
+        else {
+          continuation.resume(returning: false)
+          return
+        }
+
+        let canApply =
+          switch Self.credentialRequirement(for: interface.security()) {
+          case .none:
+            true
+          case .password:
+            credentialStore.password(for: ssidData) != nil
+          case .unsupported:
+            false
+          }
+        continuation.resume(returning: canApply)
+      }
+    }
+  }
+
   private func associateOnce(
     with band: WiFiBand,
     allowSystemKeychainAccess: Bool
@@ -120,7 +160,9 @@ final class WiFiService: @unchecked Sendable {
             allowSystemKeychainAccess: allowSystemKeychainAccess
           )
 
-          if Self.band(for: interface.wlanChannel()) == band {
+          let requiresAdministrator =
+            interface.configuration()?.requireAdministratorForAssociation ?? true
+          if Self.band(for: interface.wlanChannel()) == band, !requiresAdministrator {
             if let password {
               credentialStore.save(password: password, for: ssidData)
             }
@@ -189,7 +231,6 @@ final class WiFiService: @unchecked Sendable {
       band: ssid == nil ? .unknown : band(for: channel),
       channel: ssid == nil ? nil : channel?.channelNumber,
       rssi: ssid == nil ? nil : interface.rssiValue(),
-      transmitRate: ssid == nil ? nil : interface.transmitRate(),
       isPoweredOn: interface.powerOn(),
       isInterfaceAvailable: true
     )
@@ -218,18 +259,30 @@ final class WiFiService: @unchecked Sendable {
     }
   }
 
+  private static func credentialRequirement(for security: CWSecurity) -> CredentialRequirement {
+    if security == .none || security == .OWE || security == .oweTransition {
+      return .none
+    }
+    if security == .dynamicWEP || security == .wpaEnterprise || security == .wpaEnterpriseMixed
+      || security == .wpa2Enterprise || security == .enterprise || security == .wpa3Enterprise
+    {
+      return .unsupported
+    }
+    return .password
+  }
+
   private func password(
     for ssidData: Data,
     security: CWSecurity,
     allowSystemKeychainAccess: Bool
   ) throws -> String? {
-    if security == .none || security == .OWE || security == .oweTransition {
+    switch Self.credentialRequirement(for: security) {
+    case .none:
       return nil
-    }
-    if security == .dynamicWEP || security == .wpaEnterprise || security == .wpaEnterpriseMixed
-      || security == .wpa2Enterprise || security == .enterprise || security == .wpa3Enterprise
-    {
+    case .unsupported:
       throw WiFiServiceError.enterpriseUnsupported
+    case .password:
+      break
     }
 
     if let cachedPassword = cachedPasswords[ssidData] {

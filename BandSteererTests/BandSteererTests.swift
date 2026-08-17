@@ -47,6 +47,21 @@ struct BandSteererTests {
   }
 
   @Test
+  func locationPermissionMenuCopyUsesCompactNativeMenuRows() {
+    let variants = [
+      LocationPermissionMenuCopy.undetermined,
+      LocationPermissionMenuCopy.restricted,
+      LocationPermissionMenuCopy.denied,
+    ]
+    let localizedLines = variants.map { lines in
+      lines.map { String(localized: $0) }
+    }
+
+    #expect(localizedLines.allSatisfy { $0.count == 2 })
+    #expect(localizedLines.flatMap { $0 }.allSatisfy { $0.count <= 55 })
+  }
+
+  @Test
   func choosesStrongestCandidateInRequestedBand() {
     let candidates = [
       NetworkCandidate(identifier: "2g", band: .twoPointFour, rssi: -30),
@@ -66,6 +81,30 @@ struct BandSteererTests {
     ]
 
     #expect(BandSelection.bestCandidate(for: .five, among: candidates) == nil)
+  }
+
+  @Test
+  func onlyTransientAssociationFailuresKeepPreferenceActive() {
+    #expect(
+      AssociationFailurePolicy.keepsPreferenceActive(
+        after: WiFiServiceError.noNetworkInBand(.five)
+      )
+    )
+    #expect(
+      AssociationFailurePolicy.keepsPreferenceActive(
+        after: WiFiServiceError.verificationFailed(.five)
+      )
+    )
+    #expect(
+      !AssociationFailurePolicy.keepsPreferenceActive(
+        after: WiFiServiceError.credentialsUnavailable
+      )
+    )
+    #expect(
+      !AssociationFailurePolicy.keepsPreferenceActive(
+        after: NSError(domain: "Authorization", code: 1)
+      )
+    )
   }
 
   @Test
@@ -109,6 +148,32 @@ struct BandSteererTests {
     session.observe(ssid: "Cafe", savedPreference: .automatic)
 
     #expect(session.preference == .five)
+  }
+
+  @Test
+  func savedPreferenceFallsBackToAutomaticWhenApplyingItWouldPrompt() {
+    let preference = PreferenceRestorationPolicy.effectivePreference(
+      savedPreference: .five,
+      canApplyWithoutUserInteraction: false
+    )
+
+    #expect(preference == .automatic)
+  }
+
+  @Test
+  func savedPreferenceRestoresWhenItCanBeAppliedWithoutPrompting() {
+    let preference = PreferenceRestorationPolicy.effectivePreference(
+      savedPreference: .five,
+      canApplyWithoutUserInteraction: true
+    )
+
+    #expect(preference == .five)
+    #expect(
+      PreferenceRestorationPolicy.effectivePreference(
+        savedPreference: .automatic,
+        canApplyWithoutUserInteraction: false
+      ) == .automatic
+    )
   }
 
   @Test
@@ -213,6 +278,156 @@ struct BandSteererTests {
   }
 
   @Test
+  func removesAllSavedPreferences() throws {
+    let suiteName = "org.bandsteerer.BandSteererTests.\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suiteName))
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    let store = BandPreferenceStore(defaults: defaults)
+    store.set(.five, for: "Cafe")
+    store.set(.twoPointFour, for: "Home")
+
+    store.removeAll()
+
+    #expect(store.preference(for: "Cafe") == .automatic)
+    #expect(store.preference(for: "Home") == .automatic)
+    #expect(defaults.object(forKey: BandPreferenceStore.storageKey) == nil)
+  }
+
+  @Test
+  func menuBarPresentationShowsOnlyWiFiInAutomaticMode() {
+    let presentation = MenuBarPresentation(
+      isLocationAuthorized: true,
+      connection: connected(on: .five),
+      preference: .automatic,
+      isWorking: false,
+      isRecoveringFromWake: false
+    )
+
+    #expect(presentation.systemImage == "wifi")
+    #expect(presentation.bandText == nil)
+    #expect(
+      String(localized: presentation.accessibilityLabel)
+        == "BandSteerer is using Automatic mode"
+    )
+  }
+
+  @Test
+  func automaticModeDoesNotAdvertiseWakeRecovery() {
+    let presentation = MenuBarPresentation(
+      isLocationAuthorized: true,
+      connection: connected(on: .five),
+      preference: .automatic,
+      isWorking: false,
+      isRecoveringFromWake: true
+    )
+
+    #expect(presentation.systemImage == "wifi")
+    #expect(presentation.bandText == nil)
+    #expect(
+      String(localized: presentation.accessibilityLabel)
+        == "BandSteerer is using Automatic mode"
+    )
+  }
+
+  @Test
+  func menuBarPresentationShowsActiveBandWithUnits() {
+    let fiveGHz = MenuBarPresentation(
+      isLocationAuthorized: true,
+      connection: connected(on: .five),
+      preference: .five,
+      isWorking: false,
+      isRecoveringFromWake: false
+    )
+    let twoPointFourGHz = MenuBarPresentation(
+      isLocationAuthorized: true,
+      connection: connected(on: .twoPointFour),
+      preference: .twoPointFour,
+      isWorking: false,
+      isRecoveringFromWake: false
+    )
+
+    #expect(fiveGHz.systemImage == "wifi")
+    #expect(fiveGHz.bandText == "5 GHz")
+    #expect(
+      String(localized: fiveGHz.accessibilityLabel)
+        == "BandSteerer has the 5 GHz preference active"
+    )
+    #expect(twoPointFourGHz.systemImage == "wifi")
+    #expect(twoPointFourGHz.bandText == "2.4 GHz")
+    #expect(
+      String(localized: twoPointFourGHz.accessibilityLabel)
+        == "BandSteerer has the 2.4 GHz preference active"
+    )
+  }
+
+  @Test
+  func menuBarPresentationMakesCorrectionVisible() {
+    let presentation = MenuBarPresentation(
+      isLocationAuthorized: true,
+      connection: connected(on: .twoPointFour),
+      preference: .five,
+      isWorking: false,
+      isRecoveringFromWake: false
+    )
+    let switching = MenuBarPresentation(
+      isLocationAuthorized: true,
+      connection: connected(on: .five),
+      preference: .five,
+      isWorking: true,
+      isRecoveringFromWake: false
+    )
+
+    #expect(presentation.systemImage == "wifi.exclamationmark")
+    #expect(presentation.bandText == "5 GHz")
+    #expect(
+      String(localized: presentation.accessibilityLabel)
+        == "BandSteerer is restoring the 5 GHz preference"
+    )
+    #expect(switching.systemImage == "wifi.exclamationmark")
+  }
+
+  @Test
+  func menuBarPresentationShowsUnavailableStates() {
+    let missingPermission = MenuBarPresentation(
+      isLocationAuthorized: false,
+      connection: connected(on: .five),
+      preference: .five,
+      isWorking: false,
+      isRecoveringFromWake: false
+    )
+    let poweredOff = MenuBarPresentation(
+      isLocationAuthorized: true,
+      connection: WiFiConnection(isPoweredOn: false, isInterfaceAvailable: true),
+      preference: .automatic,
+      isWorking: false,
+      isRecoveringFromWake: false
+    )
+
+    #expect(missingPermission.systemImage == "wifi.slash")
+    #expect(missingPermission.bandText == nil)
+    #expect(poweredOff.systemImage == "wifi.slash")
+    #expect(poweredOff.bandText == nil)
+  }
+
+  @Test
+  func oldMenuMessagesExpire() {
+    let shownAt = Date(timeIntervalSince1970: 1_000)
+
+    #expect(
+      !MenuMessagePolicy.isExpired(
+        shownAt: shownAt,
+        now: shownAt.addingTimeInterval(MenuMessagePolicy.expirationInterval - 1)
+      )
+    )
+    #expect(
+      MenuMessagePolicy.isExpired(
+        shownAt: shownAt,
+        now: shownAt.addingTimeInterval(MenuMessagePolicy.expirationInterval)
+      )
+    )
+  }
+
+  @Test
   func correctionBackoffStartsFastAndCaps() {
     #expect(CorrectionPolicy.retryDelay(afterConsecutiveFailures: 0) == 15)
     #expect(CorrectionPolicy.retryDelay(afterConsecutiveFailures: 1) == 15)
@@ -247,5 +462,14 @@ struct BandSteererTests {
   func wakeRecoveryIsBounded() {
     #expect(WakeRecoveryPolicy.retryDelays.reduce(0, +) == 32)
     #expect(WakeRecoveryPolicy.retryDelays.allSatisfy { $0 > 0 })
+  }
+
+  private func connected(on band: WiFiBand) -> WiFiConnection {
+    WiFiConnection(
+      ssid: "Cafe",
+      band: band,
+      isPoweredOn: true,
+      isInterfaceAvailable: true
+    )
   }
 }

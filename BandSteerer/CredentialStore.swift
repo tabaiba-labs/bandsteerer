@@ -72,6 +72,7 @@ final class CredentialStore: @unchecked Sendable {
     if returningData {
       query[kSecReturnData as String] = true
       query[kSecMatchLimit as String] = kSecMatchLimitOne
+      query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUISkip
     }
     return query
   }

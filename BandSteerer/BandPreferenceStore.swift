@@ -29,6 +29,10 @@ struct BandPreferenceStore {
     defaults.set(preferences, forKey: Self.storageKey)
   }
 
+  func removeAll() {
+    defaults.removeObject(forKey: Self.storageKey)
+  }
+
   static func networkIdentifier(for ssid: String) -> String {
     Data(SHA256.hash(data: Data(ssid.utf8))).base64EncodedString()
   }

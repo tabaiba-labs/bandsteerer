@@ -9,7 +9,8 @@ BandSteerer is a native macOS menu-bar utility for choosing the 2.4 GHz or 5 GHz
 - **Automatic** leaves Wi-Fi roaming to macOS.
 - **Prefer 2.4 GHz** associates with the strongest visible 2.4 GHz access point for the current network.
 - **Prefer 5 GHz** does the same for 5 GHz.
-- Band preferences are remembered separately for each network across disconnects, app launches, and Mac reboots.
+- Successfully applied band preferences are remembered separately for each network across disconnects, app launches, and Mac reboots.
+- The menu-bar label shows an active band preference and makes corrections or unavailable Wi-Fi visible at a glance.
 - BandSteerer corrects a connection only when macOS moves to the wrong band. Moving between access points within the selected band requires no intervention.
 - Sleep pauses connection checks. After wake, the app waits for Wi-Fi to reconnect before restoring the preference for the same network.
 - **Open at Login** can restore saved preferences automatically after signing in.
@@ -34,7 +35,10 @@ Download the latest DMG from [GitHub Releases](https://github.com/tabaiba-labs/b
 2. Choose **Allow Wi-Fi Access** and approve Location permission.
 3. Select **Prefer 2.4 GHz** or **Prefer 5 GHz** while connected to a supported network.
 
-The selection is remembered for that network. Choose **Automatic** to remove it.
+A successfully applied selection is remembered for that network. Choose **Automatic** to remove it.
+Use **About BandSteerer > Reset Saved Preferences…** to remove every saved band choice at once.
+
+On launch, BandSteerer restores a saved preference only when it can apply it without an authorization prompt. Otherwise it starts that network in Automatic mode and waits for you to choose a band, so macOS presents any required prompt in response to your action.
 
 On password-protected personal networks, macOS may show an authorization prompt when BandSteerer reads the password already saved in the Keychain. After a successful selection, the app stores a device-local Keychain copy so future corrections do not prompt repeatedly. BandSteerer never writes Wi-Fi passwords to files or logs.
 

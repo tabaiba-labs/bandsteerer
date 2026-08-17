@@ -24,16 +24,6 @@ struct MenuBarView: View {
 
       Divider()
 
-      Button("About BandSteerer") {
-        openWindow(id: "about")
-        NSApplication.shared.activate(ignoringOtherApps: true)
-      }
-
-      Button("Check for Updates…") {
-        updates.checkForUpdates()
-      }
-      .disabled(!updates.canCheckForUpdates)
-
       Toggle(
         "Open at Login",
         isOn: Binding(
@@ -42,9 +32,24 @@ struct MenuBarView: View {
         )
       )
 
+      Divider()
+
+      Button("About BandSteerer") {
+        openWindow(id: "about")
+        NSApplication.shared.activate()
+      }
+
+      Button("Check for Updates…") {
+        updates.checkForUpdates()
+      }
+      .disabled(!updates.canCheckForUpdates)
+
+      Divider()
+
       Button("Quit BandSteerer") {
         model.quit()
       }
+      .keyboardShortcut("q", modifiers: .command)
     }
     .onAppear {
       model.menuDidOpen()
@@ -58,7 +63,7 @@ struct MenuBarView: View {
   private var statusSection: some View {
     if !locationPermission.isAuthorized {
       Section("Wi-Fi Access") {
-        Text("Allow access so BandSteerer can identify the current Wi-Fi network.")
+        locationPermissionExplanation
       }
     } else if model.isRecoveringFromWake {
       Section(model.connection.ssid ?? "Reconnecting to Wi-Fi") {
@@ -66,7 +71,9 @@ struct MenuBarView: View {
       }
     } else if model.connection.isConnected {
       Section(networkTitle) {
-        Text(connectionSummary)
+        if !connectionSummary.isEmpty {
+          Text(connectionSummary)
+        }
 
         if model.isWorking {
           Text("Switching to \(model.preference.title)…")
@@ -76,10 +83,6 @@ struct MenuBarView: View {
           Text("Restoring \(model.preference.title)…")
         } else if model.preference != .automatic {
           Text("\(model.preference.title) preference active")
-        }
-
-        if let message = model.message {
-          Text(message)
         }
       }
     } else if !model.connection.isInterfaceAvailable {
@@ -98,6 +101,30 @@ struct MenuBarView: View {
         Text("Turn on Wi-Fi to choose a band.")
       }
     }
+
+    if let message = model.message {
+      Section {
+        Label(message, systemImage: "exclamationmark.triangle")
+      }
+    }
+  }
+
+  private var locationPermissionExplanation: some View {
+    let lines = locationPermissionExplanationLines
+
+    return ForEach(lines.indices, id: \.self) { index in
+      Text(lines[index])
+    }
+  }
+
+  private var locationPermissionExplanationLines: [LocalizedStringResource] {
+    if locationPermission.isUndetermined {
+      LocationPermissionMenuCopy.undetermined
+    } else if locationPermission.status == .restricted {
+      LocationPermissionMenuCopy.restricted
+    } else {
+      LocationPermissionMenuCopy.denied
+    }
   }
 
   private var bandPicker: some View {
@@ -113,9 +140,7 @@ struct MenuBarView: View {
       Text("Prefer 5 GHz").tag(BandPreference.five)
     }
     .pickerStyle(.inline)
-    .disabled(
-      !model.connection.isConnected || model.isWorking || model.isRecoveringFromWake
-    )
+    .disabled(!model.connection.isConnected || model.isRecoveringFromWake)
   }
 
   @ViewBuilder
@@ -144,9 +169,25 @@ struct MenuBarView: View {
     [
       model.connection.channel.map { "Channel \($0)" },
       model.connection.rssi.map { "Signal \($0) dBm" },
-      model.connection.transmitRate.map { "Link \(Int($0.rounded())) Mbps" },
     ]
     .compactMap { $0 }
     .joined(separator: " · ")
   }
+}
+
+enum LocationPermissionMenuCopy {
+  static let undetermined: [LocalizedStringResource] = [
+    "macOS requires Location access for Wi-Fi names.",
+    "BandSteerer never reads your location.",
+  ]
+
+  static let restricted: [LocalizedStringResource] = [
+    "Location access is restricted.",
+    "Allow it to reveal Wi-Fi names.",
+  ]
+
+  static let denied: [LocalizedStringResource] = [
+    "Location access is off.",
+    "Enable it in System Settings to reveal Wi-Fi names.",
+  ]
 }

@@ -38,6 +38,7 @@ final class AppModel: NSObject, ObservableObject {
   private var associationGeneration = 0
   private var consecutiveCorrectionFailures = 0
   private var nextCorrectionAttempt = Date.distantPast
+  private var messageShownAt: Date?
 
   init(
     service: WiFiService = WiFiService(),
@@ -63,7 +64,22 @@ final class AppModel: NSObject, ObservableObject {
   }
 
   func menuDidOpen() {
+    if let messageShownAt,
+      MenuMessagePolicy.isExpired(shownAt: messageShownAt, now: Date())
+    {
+      clearMessage()
+    }
     refresh()
+  }
+
+  var menuBarPresentation: MenuBarPresentation {
+    MenuBarPresentation(
+      isLocationAuthorized: locationPermission.isAuthorized,
+      connection: connection,
+      preference: preference,
+      isWorking: isWorking,
+      isRecoveringFromWake: isRecoveringFromWake
+    )
   }
 
   func requestLocationAccess() {
@@ -74,11 +90,11 @@ final class AppModel: NSObject, ObservableObject {
     guard connection.isConnected, let ssid = session.ssid else { return }
     session.select(newPreference)
     preference = session.preference
-    preferenceStore.set(preference, for: ssid)
-    message = nil
+    clearMessage()
     correctionTask?.cancel()
 
     guard let desiredBand = newPreference.band else {
+      preferenceStore.set(.automatic, for: ssid)
       cancelAssociation()
       stopPreferenceMonitoring()
       resetCorrectionBackoff()
@@ -100,8 +116,19 @@ final class AppModel: NSObject, ObservableObject {
       launchAtLogin = SMAppService.mainApp.status == .enabled
     } catch {
       launchAtLogin = SMAppService.mainApp.status == .enabled
-      message = "Launch at login could not be changed: \(error.localizedDescription)"
+      showMessage("Launch at login could not be changed: \(error.localizedDescription)")
     }
+  }
+
+  func resetSavedPreferences() {
+    preferenceStore.removeAll()
+    session.select(.automatic)
+    preference = .automatic
+    correctionTask?.cancel()
+    cancelAssociation()
+    stopPreferenceMonitoring()
+    resetCorrectionBackoff()
+    clearMessage()
   }
 
   func quit() {
@@ -131,9 +158,22 @@ final class AppModel: NSObject, ObservableObject {
           updatedConnection.ssid.map {
             preferenceStore.preference(for: $0)
           } ?? .automatic
-        session.observe(ssid: updatedConnection.ssid, savedPreference: savedPreference)
+        let canApplyWithoutUserInteraction: Bool
+        if savedPreference == .automatic {
+          canApplyWithoutUserInteraction = true
+        } else if let ssid = updatedConnection.ssid {
+          canApplyWithoutUserInteraction =
+            await service.canApplySavedPreferenceWithoutUserInteraction(for: ssid)
+        } else {
+          canApplyWithoutUserInteraction = false
+        }
+        let effectivePreference = PreferenceRestorationPolicy.effectivePreference(
+          savedPreference: savedPreference,
+          canApplyWithoutUserInteraction: canApplyWithoutUserInteraction
+        )
+        session.observe(ssid: updatedConnection.ssid, savedPreference: effectivePreference)
         await service.clearCachedPasswords()
-        message = nil
+        clearMessage()
         resetCorrectionBackoff()
       }
       preference = session.preference
@@ -291,26 +331,29 @@ final class AppModel: NSObject, ObservableObject {
         )
         try Task.checkCancellation()
         guard associationGeneration == generation else { return }
+        if let ssid = session.ssid, session.preference.band == band {
+          preferenceStore.set(session.preference, for: ssid)
+        }
         connection = updatedConnection
-        message = nil
+        clearMessage()
         resetCorrectionBackoff()
       } catch is CancellationError {
         return
       } catch {
         guard !Task.isCancelled, associationGeneration == generation else { return }
         recordCorrectionFailure()
-        let serviceError = error as? WiFiServiceError
-        if let serviceError, !serviceError.keepsPreferenceActive {
+        let keepsPreferenceActive = AssociationFailurePolicy.keepsPreferenceActive(after: error)
+        if !keepsPreferenceActive {
           let failedSSID = session.ssid
           session.select(.automatic)
           preference = .automatic
           stopPreferenceMonitoring()
-          if !automatic, let failedSSID {
+          if let failedSSID {
             preferenceStore.set(.automatic, for: failedSSID)
           }
         }
-        if !automatic || serviceError?.keepsPreferenceActive == false {
-          message = error.localizedDescription
+        if !automatic || !keepsPreferenceActive {
+          showMessage(error.localizedDescription)
         }
         let updatedConnection = await service.readConnection()
         guard !Task.isCancelled, associationGeneration == generation else { return }
@@ -337,5 +380,15 @@ final class AppModel: NSObject, ObservableObject {
   private func resetCorrectionBackoff() {
     consecutiveCorrectionFailures = 0
     nextCorrectionAttempt = .distantPast
+  }
+
+  private func showMessage(_ newMessage: String) {
+    message = newMessage
+    messageShownAt = Date()
+  }
+
+  private func clearMessage() {
+    message = nil
+    messageShownAt = nil
   }
 }

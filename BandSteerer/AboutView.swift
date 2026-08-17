@@ -2,6 +2,10 @@ import AppKit
 import SwiftUI
 
 struct AboutView: View {
+  let onResetSavedPreferences: () -> Void
+
+  @Environment(\.dismiss) private var dismiss
+  @State private var isShowingResetConfirmation = false
   private let buildInfo = AppBuildInfo.current
 
   var body: some View {
@@ -46,6 +50,23 @@ struct AboutView: View {
 
       Divider()
 
+      VStack(alignment: .leading, spacing: 8) {
+        Label("Saved preferences", systemImage: "lock.shield")
+          .font(.headline)
+
+        Text("Band choices are stored locally using hashed network identifiers.")
+          .font(.callout)
+          .foregroundStyle(.secondary)
+
+        Button("Reset Saved Preferences…", role: .destructive) {
+          isShowingResetConfirmation = true
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(24)
+
+      Divider()
+
       Text("Made for macOS with public system frameworks.")
         .font(.caption)
         .foregroundStyle(.tertiary)
@@ -54,11 +75,24 @@ struct AboutView: View {
     }
     .frame(width: 440)
     .fixedSize(horizontal: false, vertical: true)
+    .onExitCommand {
+      dismiss()
+    }
+    .alert("Reset Saved Preferences?", isPresented: $isShowingResetConfirmation) {
+      Button("Cancel", role: .cancel) {}
+      Button("Reset", role: .destructive) {
+        onResetSavedPreferences()
+      }
+    } message: {
+      Text(
+        "BandSteerer will switch to Automatic and forget every saved band choice. Your Wi-Fi passwords and macOS network settings are unchanged."
+      )
+    }
   }
 }
 
 #Preview("About BandSteerer") {
-  AboutView()
+  AboutView(onResetSavedPreferences: {})
 }
 
 private struct AboutSection: View {

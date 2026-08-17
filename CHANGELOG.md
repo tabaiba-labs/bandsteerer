@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 - 2026-08-17
+
+### Changed
+
+- Restored saved band preferences only when they can be enforced without an authorization prompt; otherwise launch now falls back to Automatic until the user chooses a band.
+- Made the menu-bar label show active bands with explicit GHz units, while keeping Automatic visually quiet during wake recovery and avoiding Automatic-mode polling.
+- Kept band choices cancellable during an in-progress switch and clarified localizable Location permission and connection status copy without widening the native menu.
+- Reordered menu actions, added the standard Command-Q shortcut, and replaced the deprecated application activation call.
+- Tightened connection details to channel and signal strength and made errors visually distinct, clearing stale errors when the menu reopens.
+
+### Added
+
+- Added an About-window action to reset every saved band preference with confirmation.
 
 ## 0.3.0 - 2026-08-16
 
