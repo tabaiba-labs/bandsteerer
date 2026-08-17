@@ -10,7 +10,8 @@ body:
     id: version
     attributes:
       label: BandSteerer version
-      placeholder: "0.2.1"
+      description: Open About BandSteerer and copy the complete version and build.
+      placeholder: "Version X.Y.Z (Build N)"
     validations:
       required: true
   - type: dropdown

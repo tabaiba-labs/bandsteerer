@@ -4,9 +4,9 @@ Security fixes are provided for the latest released version of BandSteerer.
 
 ## Reporting a vulnerability
 
-Use the repository host’s private vulnerability-reporting feature when it is enabled. Include the affected version, macOS version and architecture, impact, reproduction steps, and any minimal proof of concept needed to verify the issue.
+Use [GitHub private vulnerability reporting](https://github.com/tabaiba-labs/bandsteerer/security/advisories/new). Include the affected version, macOS version and architecture, impact, reproduction steps, and any minimal proof of concept needed to verify the issue.
 
-Do not put credentials, Wi-Fi identifiers, Keychain exports, crash reports containing personal paths, or exploit details in a public issue. If private reporting is not enabled, open a public issue containing no sensitive details and ask the maintainers to establish a private channel.
+Do not put credentials, Wi-Fi identifiers, Keychain exports, crash reports containing personal paths, or exploit details in a public issue.
 
 ## Security boundaries
 

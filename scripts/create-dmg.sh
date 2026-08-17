@@ -10,6 +10,7 @@ fi
 version=${1#v}
 app=$2
 output_directory=$3
+notices="${0:A:h:h}/THIRD-PARTY-NOTICES.md"
 
 if [[ ! "$version" =~ '^[0-9]+\.[0-9]+\.[0-9]+$' ]]; then
   print -u2 "Version must use the X.Y.Z format."
@@ -18,6 +19,11 @@ fi
 
 if [[ ! -d "$app" || "${app:t}" != BandSteerer.app ]]; then
   print -u2 "App must be an existing BandSteerer.app bundle: $app"
+  exit 66
+fi
+
+if [[ ! -f "$notices" ]]; then
+  print -u2 "Missing third-party notices: $notices"
   exit 66
 fi
 
@@ -39,6 +45,7 @@ staging_directory=$(mktemp -d "${TMPDIR:-/tmp}/bandsteerer-dmg.XXXXXX")
 trap 'rm -rf "$staging_directory"' EXIT
 
 ditto "$app" "$staging_directory/BandSteerer.app"
+ditto "$notices" "$staging_directory/Third-Party Notices.md"
 ln -s /Applications "$staging_directory/Applications"
 
 hdiutil create \

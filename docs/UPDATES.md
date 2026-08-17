@@ -7,6 +7,7 @@ BandSteerer uses Sparkle 2.9.4. The app checks the static `appcast.xml` feed onc
 - `BandSteerer/Info.plist` contains the public EdDSA key used to verify update archives.
 - The matching private key lives in the maintainer's macOS login Keychain under the Sparkle account `tabaiba-labs.bandsteerer`. It must never enter this repository.
 - Official app bundles and disk images must also be signed with Developer ID and notarized.
+- `THIRD-PARTY-NOTICES.md` reproduces Sparkle's license and bundled-component notices. It ships inside the app and at the disk-image root.
 - `appcast.xml` is served over HTTPS from the repository's `main` branch. Its enclosure URLs point to immutable GitHub Release assets.
 
 Back up the private key to secure offline storage before the first public update. Sparkle's official tool exports it without printing it:
@@ -21,7 +22,7 @@ Never use a repository path or shared cloud folder for that export.
 
 1. Update `MARKETING_VERSION` and increment `CURRENT_PROJECT_VERSION` in both target build configurations. Build numbers must never be reused.
 2. Run the complete test, analyze, universal Release build, signing, and notarization checks.
-3. Export the Developer ID-signed `BandSteerer.app` and create the drag-and-drop disk image. The script creates an APFS/LZFSE DMG containing the app and an `Applications` shortcut:
+3. Confirm `THIRD-PARTY-NOTICES.md` matches the license file in the pinned Sparkle release. Export the Developer ID-signed `BandSteerer.app` and create the drag-and-drop disk image. The script creates an APFS/LZFSE DMG containing the app, the notices, and an `Applications` shortcut:
 
    ```sh
    scripts/create-dmg.sh VERSION /path/to/BandSteerer.app /path/to/release-directory

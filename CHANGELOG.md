@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added automated Swift package update checks and made Sparkle's third-party notices part of both app and disk-image packaging.
+
+### Changed
+
+- Limited duplicate CI runs to pull requests and pushes to `main`, clarified private vulnerability reporting, and made the bug-report version prompt release-independent.
+
 ## 0.4.0 - 2026-08-17
 
 ### Changed

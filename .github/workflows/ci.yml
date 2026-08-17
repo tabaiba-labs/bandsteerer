@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
@@ -27,6 +29,7 @@ jobs:
 
           /usr/bin/plutil -lint BandSteerer/Info.plist BandSteerer/BandSteerer.entitlements
           /usr/bin/xmllint --noout appcast.xml
+          test -f THIRD-PARTY-NOTICES.md
           test -x scripts/create-dmg.sh
           test -x scripts/generate-appcast.sh
           /bin/zsh -n scripts/create-dmg.sh
@@ -67,7 +70,8 @@ jobs:
           email_pattern='[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}'
           if git grep -IqE -e "$email_pattern" -- . \
             ':(exclude).github/workflows/ci.yml' \
-            ':(exclude)BandSteerer/Assets.xcassets/AppIcon.appiconset/Contents.json'
+            ':(exclude)BandSteerer/Assets.xcassets/AppIcon.appiconset/Contents.json' \
+            ':(exclude)THIRD-PARTY-NOTICES.md'
           then
             print -u2 "Possible private or account-specific email address found."
             exit 1
@@ -129,6 +133,11 @@ jobs:
           sparkle="$app/Contents/Frameworks/Sparkle.framework/Versions/Current"
 
           test -f "$app/Contents/Resources/AppIcon.icns"
+          test -f "$app/Contents/Resources/THIRD-PARTY-NOTICES.md"
+          /usr/bin/grep -Fq 'BandSteerer includes Sparkle 2.9.4.' \
+            "$app/Contents/Resources/THIRD-PARTY-NOTICES.md"
+          /usr/bin/grep -Fq 'Copyright (c) 2006-2013 Andy Matuschak.' \
+            "$app/Contents/Resources/THIRD-PARTY-NOTICES.md"
           test -x "$sparkle/Autoupdate"
           test -x "$sparkle/XPCServices/Installer.xpc/Contents/MacOS/Installer"
           test "$(/usr/libexec/PlistBuddy -c 'Print :SUEnableAutomaticChecks' "$app/Contents/Info.plist")" = true

@@ -70,6 +70,7 @@ See [PRIVACY.md](PRIVACY.md) for data handling and [SECURITY.md](SECURITY.md) fo
 ## Project
 
 - [MIT License](LICENSE)
+- [Third-party notices](THIRD-PARTY-NOTICES.md)
 - [Contributing](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Changelog](CHANGELOG.md)
