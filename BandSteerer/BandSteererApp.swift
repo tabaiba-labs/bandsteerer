@@ -41,6 +41,6 @@ private struct MenuBarLabel: View {
       }
     }
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(presentation.accessibilityLabel)
+    .accessibilityLabel(Text(presentation.accessibilityLabel))
   }
 }
