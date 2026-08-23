@@ -6,6 +6,15 @@
         <description>BandSteerer release updates</description>
         <language>en</language>
         <item>
+            <title>0.5.0</title>
+            <pubDate>Sun, 23 Aug 2026 15:46:17 +0800</pubDate>
+            <link>https://github.com/tabaiba-labs/bandsteerer</link>
+            <sparkle:version>11</sparkle:version>
+            <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/tabaiba-labs/bandsteerer/releases/download/v0.5.0/BandSteerer-0.5.0.dmg" length="3491270" type="application/octet-stream" sparkle:edSignature="kB5k9X59v708VISDJMJ6TwO3XGqsC5vtyWgZ21Y3tKeWs9Lq7zNEySm/ZhU1CDc+vrCDrtG/CQNdeTLz8+/mCg=="/>
+        </item>
+        <item>
             <title>0.4.0</title>
             <pubDate>Mon, 17 Aug 2026 12:22:23 +0800</pubDate>
             <link>https://github.com/tabaiba-labs/bandsteerer</link>
