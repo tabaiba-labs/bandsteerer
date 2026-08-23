@@ -5,10 +5,10 @@ import OSLog
 enum WiFiServiceError: LocalizedError {
   case noInterface
   case notConnected
-  case noNetworkInBand(WiFiBand)
+  case noFiveGHzNetwork
   case credentialsUnavailable
   case enterpriseUnsupported
-  case verificationFailed(WiFiBand)
+  case verificationFailed
 
   var errorDescription: String? {
     switch self {
@@ -16,20 +16,20 @@ enum WiFiServiceError: LocalizedError {
       "No Wi-Fi interface is available."
     case .notConnected:
       "Connect to Wi-Fi first."
-    case .noNetworkInBand(let band):
-      "\(band.rawValue) isn't visible yet. BandSteerer will keep watching."
+    case .noFiveGHzNetwork:
+      "5 GHz isn't visible yet. BandSteerer will keep watching."
     case .credentialsUnavailable:
-      "The saved Wi-Fi password couldn't be accessed. Choose the band again to retry."
+      "The saved Wi-Fi password couldn't be accessed. Turn Prefer 5 GHz on again to retry."
     case .enterpriseUnsupported:
       "Enterprise Wi-Fi can't be steered with the public macOS APIs."
-    case .verificationFailed(let band):
-      "macOS moved away from \(band.rawValue). BandSteerer will keep watching."
+    case .verificationFailed:
+      "macOS moved away from 5 GHz. BandSteerer will keep watching."
     }
   }
 
   var isTransientAssociationFailure: Bool {
     switch self {
-    case .noNetworkInBand, .verificationFailed:
+    case .noFiveGHzNetwork, .verificationFailed:
       true
     default:
       false
@@ -80,17 +80,13 @@ final class WiFiService: @unchecked Sendable {
     }
   }
 
-  func associate(
-    with band: WiFiBand,
-    allowSystemKeychainAccess: Bool
-  ) async throws -> WiFiConnection {
+  func associateWithFiveGHz(allowSystemKeychainAccess: Bool) async throws -> WiFiConnection {
     let retryDelays: [Duration] = [.milliseconds(750), .milliseconds(1_500)]
 
     for attempt in 0...retryDelays.count {
       try Task.checkCancellation()
       do {
-        return try await associateOnce(
-          with: band,
+        return try await associateOnceWithFiveGHz(
           allowSystemKeychainAccess: allowSystemKeychainAccess
         )
       } catch let error as WiFiServiceError {
@@ -101,7 +97,7 @@ final class WiFiService: @unchecked Sendable {
       }
     }
 
-    throw WiFiServiceError.noNetworkInBand(band)
+    throw WiFiServiceError.noFiveGHzNetwork
   }
 
   func clearCachedPasswords() async {
@@ -141,8 +137,7 @@ final class WiFiService: @unchecked Sendable {
     }
   }
 
-  private func associateOnce(
-    with band: WiFiBand,
+  private func associateOnceWithFiveGHz(
     allowSystemKeychainAccess: Bool
   ) async throws -> WiFiConnection {
     try await withCheckedThrowingContinuation { continuation in
@@ -162,7 +157,7 @@ final class WiFiService: @unchecked Sendable {
 
           let requiresAdministrator =
             interface.configuration()?.requireAdministratorForAssociation ?? true
-          if Self.band(for: interface.wlanChannel()) == band, !requiresAdministrator {
+          if Self.band(for: interface.wlanChannel()) == .five, !requiresAdministrator {
             if let password {
               credentialStore.save(password: password, for: ssidData)
             }
@@ -173,24 +168,22 @@ final class WiFiService: @unchecked Sendable {
           let candidates = try interface.scanForNetworks(withSSID: ssidData).compactMap {
             network -> (network: CWNetwork, candidate: NetworkCandidate)? in
             let networkBand = Self.band(for: network.wlanChannel)
-            guard networkBand == band else { return nil }
+            guard networkBand == .five else { return nil }
             return (
               network,
               NetworkCandidate(
                 identifier: network.bssid ?? "",
-                band: networkBand,
                 rssi: network.rssiValue
               )
             )
           }
           guard
-            let selected = BandSelection.bestCandidate(
-              for: band,
+            let selected = FiveGHzSelection.strongestCandidate(
               among: candidates.map(\.candidate)
             ),
             let target = candidates.first(where: { $0.candidate == selected })?.network
           else {
-            throw WiFiServiceError.noNetworkInBand(band)
+            throw WiFiServiceError.noFiveGHzNetwork
           }
 
           do {
@@ -202,8 +195,8 @@ final class WiFiService: @unchecked Sendable {
           }
 
           let connection = Self.connection(from: interface)
-          guard connection.band == band else {
-            throw WiFiServiceError.verificationFailed(band)
+          guard connection.band == .five else {
+            throw WiFiServiceError.verificationFailed
           }
           if let password {
             credentialStore.save(password: password, for: ssidData)

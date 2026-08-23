@@ -11,7 +11,7 @@ struct BandSteererApp: App {
     } label: {
       MenuBarLabel(model: model)
     }
-    .menuBarExtraStyle(.menu)
+    .menuBarExtraStyle(.window)
 
     Window("About BandSteerer", id: "about") {
       AboutView(onResetSavedPreferences: model.resetSavedPreferences)
@@ -32,15 +32,8 @@ private struct MenuBarLabel: View {
   var body: some View {
     let presentation = model.menuBarPresentation
 
-    HStack(spacing: 3) {
-      Image(systemName: presentation.systemImage)
-
-      if let bandText = presentation.bandText {
-        Text(bandText)
-          .monospacedDigit()
-      }
-    }
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(Text(presentation.accessibilityLabel))
+    Image(presentation.iconAssetName)
+      .renderingMode(.template)
+      .accessibilityLabel(Text(presentation.accessibilityLabel))
   }
 }

@@ -36,14 +36,14 @@ struct AboutView: View {
           title: "What it’s for",
           systemImage: "wifi",
           text:
-            "BandSteerer lets you prefer 2.4 GHz or 5 GHz on the Wi-Fi network you’re already using—useful when macOS roams to the wrong band."
+            "BandSteerer helps keep the Wi-Fi network you’re already using on 5 GHz when macOS would otherwise roam to a slower band."
         )
 
         AboutSection(
           title: "How it works",
           systemImage: "arrow.triangle.2.circlepath",
           text:
-            "It watches the current channel. If macOS moves away from your preference, BandSteerer reconnects to the strongest visible access point on that band. Automatic leaves roaming to macOS."
+            "When Prefer 5 GHz is on, BandSteerer watches the current channel and reconnects to the strongest visible 5 GHz access point if needed. Turning it off leaves roaming to macOS."
         )
       }
       .padding(24)
@@ -54,7 +54,7 @@ struct AboutView: View {
         Label("Saved preferences", systemImage: "lock.shield")
           .font(.headline)
 
-        Text("Band choices are stored locally using hashed network identifiers.")
+        Text("5 GHz preferences are stored locally using hashed network identifiers.")
           .font(.callout)
           .foregroundStyle(.secondary)
 
@@ -85,7 +85,7 @@ struct AboutView: View {
       }
     } message: {
       Text(
-        "BandSteerer will switch to Automatic and forget every saved band choice. Your Wi-Fi passwords and macOS network settings are unchanged."
+        "BandSteerer will turn off Prefer 5 GHz and forget every saved network preference. Your Wi-Fi passwords and macOS network settings are unchanged."
       )
     }
   }

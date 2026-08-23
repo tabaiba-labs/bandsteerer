@@ -134,7 +134,7 @@ jobs:
 
           test -f "$app/Contents/Resources/AppIcon.icns"
           test -f "$app/Contents/Resources/THIRD-PARTY-NOTICES.md"
-          /usr/bin/grep -Fq 'BandSteerer includes Sparkle 2.9.4.' \
+          /usr/bin/grep -Fq 'BandSteerer includes Sparkle 2.9.6.' \
             "$app/Contents/Resources/THIRD-PARTY-NOTICES.md"
           /usr/bin/grep -Fq 'Copyright (c) 2006-2013 Andy Matuschak.' \
             "$app/Contents/Resources/THIRD-PARTY-NOTICES.md"

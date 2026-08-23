@@ -1,6 +1,6 @@
 # Contributing
 
-BandSteerer intentionally stays small and native. Changes should use public Apple APIs, preserve the App Sandbox, avoid third-party dependencies beyond the narrowly scoped Sparkle updater unless there is a compelling and documented need, and keep automatic mode free of recurring Wi-Fi work.
+BandSteerer intentionally stays small and native. Changes should use public Apple APIs, preserve the App Sandbox, avoid third-party dependencies beyond the narrowly scoped Sparkle updater unless there is a compelling and documented need, and keep switch-off mode free of recurring Wi-Fi work.
 
 Participation is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). The component boundaries and invariants are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

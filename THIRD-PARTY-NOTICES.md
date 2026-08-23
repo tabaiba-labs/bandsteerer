@@ -1,6 +1,6 @@
 # Third-party notices
 
-BandSteerer includes Sparkle 2.9.4. The following license and bundled-component notices are reproduced from that release.
+BandSteerer includes Sparkle 2.9.6. The following license and bundled-component notices are reproduced from that release.
 
 Copyright (c) 2006-2013 Andy Matuschak.
 Copyright (c) 2009-2013 Elgato Systems GmbH.

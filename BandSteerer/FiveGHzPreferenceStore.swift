@@ -1,8 +1,9 @@
 import CryptoKit
 import Foundation
 
-struct BandPreferenceStore {
+struct FiveGHzPreferenceStore {
   static let storageKey = "bandPreferencesByNetwork"
+  private static let enabledValue = "five"
 
   private let defaults: UserDefaults
 
@@ -10,23 +11,31 @@ struct BandPreferenceStore {
     self.defaults = defaults
   }
 
-  func preference(for ssid: String) -> BandPreference {
-    guard let rawValue = preferences[Self.networkIdentifier(for: ssid)] else {
-      return .automatic
+  func isEnabled(for ssid: String) -> Bool {
+    let identifier = Self.networkIdentifier(for: ssid)
+    guard let value = preferences[identifier] else { return false }
+    guard value == Self.enabledValue else {
+      setEnabled(false, for: ssid)
+      return false
     }
-    return BandPreference(rawValue: rawValue) ?? .automatic
+    return true
   }
 
-  func set(_ preference: BandPreference, for ssid: String) {
+  func setEnabled(_ enabled: Bool, for ssid: String) {
     var preferences = preferences
     let identifier = Self.networkIdentifier(for: ssid)
 
-    if preference == .automatic {
-      preferences.removeValue(forKey: identifier)
+    if enabled {
+      preferences[identifier] = Self.enabledValue
     } else {
-      preferences[identifier] = preference.rawValue
+      preferences.removeValue(forKey: identifier)
     }
-    defaults.set(preferences, forKey: Self.storageKey)
+
+    if preferences.isEmpty {
+      defaults.removeObject(forKey: Self.storageKey)
+    } else {
+      defaults.set(preferences, forKey: Self.storageKey)
+    }
   }
 
   func removeAll() {

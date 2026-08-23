@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 - 2026-08-23
 
 ### Added
 
@@ -8,7 +8,15 @@
 
 ### Changed
 
+- Replaced the Automatic, 2.4 GHz, and 5 GHz picker with one native per-network **Prefer 5 GHz** switch, migrating saved 2.4 GHz choices to off and removing the generic target-band steering path.
+- Replaced the text menu-bar status with native template-rendered on and off icons that follow the active macOS appearance.
+- Moved **Check for Updates…** into the More menu instead of showing it as an unlabeled footer icon.
 - Limited duplicate CI runs to pull requests and pushes to `main`, clarified private vulnerability reporting, and made the bug-report version prompt release-independent.
+
+### Fixed
+
+- Kept custom menu-bar SVGs at an 18-point intrinsic size so macOS does not allocate an oversized, off-screen status item.
+- Upgraded Sparkle to 2.9.6 for its latest installer and archive-handling security hardening.
 
 ## 0.4.0 - 2026-08-17
 

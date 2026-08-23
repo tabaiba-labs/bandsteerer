@@ -48,7 +48,7 @@ body:
       description: Use generic network names and remove private details.
       placeholder: |
         1. Connect to a dual-band personal network.
-        2. Choose Prefer 5 GHz.
+        2. Turn on Prefer 5 GHz.
         3. Observe ...
     validations:
       required: true

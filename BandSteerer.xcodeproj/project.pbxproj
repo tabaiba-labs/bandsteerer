@@ -17,7 +17,7 @@
 		A00000000000000000000008 /* WiFiTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000008 /* WiFiTypes.swift */; };
 		A00000000000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000009 /* Assets.xcassets */; };
 		A0000000000000000000000A /* BandSteererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000C /* BandSteererTests.swift */; };
-		A0000000000000000000000B /* BandPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000D /* BandPreferenceStore.swift */; };
+		A0000000000000000000000B /* FiveGHzPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000D /* FiveGHzPreferenceStore.swift */; };
 		A0000000000000000000000C /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000010 /* AboutView.swift */; };
 		A0000000000000000000000D /* UpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000011 /* UpdateController.swift */; };
 		A0000000000000000000000E /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 500000000000000000000002 /* Sparkle */; };
@@ -47,7 +47,7 @@
 		B0000000000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B0000000000000000000000B /* BandSteerer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BandSteerer.entitlements; sourceTree = "<group>"; };
 		B0000000000000000000000C /* BandSteererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandSteererTests.swift; sourceTree = "<group>"; };
-		B0000000000000000000000D /* BandPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandPreferenceStore.swift; sourceTree = "<group>"; };
+		B0000000000000000000000D /* FiveGHzPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiveGHzPreferenceStore.swift; sourceTree = "<group>"; };
 		B0000000000000000000000E /* BandSteerer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BandSteerer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B0000000000000000000000F /* BandSteererTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BandSteererTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B00000000000000000000010 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
@@ -89,7 +89,7 @@
 			children = (
 				B00000000000000000000010 /* AboutView.swift */,
 				B00000000000000000000001 /* AppIdentity.swift */,
-				B0000000000000000000000D /* BandPreferenceStore.swift */,
+				B0000000000000000000000D /* FiveGHzPreferenceStore.swift */,
 				B00000000000000000000002 /* AppModel.swift */,
 				B00000000000000000000003 /* BandSteererApp.swift */,
 				B00000000000000000000004 /* CredentialStore.swift */,
@@ -232,7 +232,7 @@
 			files = (
 				A0000000000000000000000C /* AboutView.swift in Sources */,
 				A00000000000000000000001 /* AppIdentity.swift in Sources */,
-				A0000000000000000000000B /* BandPreferenceStore.swift in Sources */,
+				A0000000000000000000000B /* FiveGHzPreferenceStore.swift in Sources */,
 				A00000000000000000000002 /* AppModel.swift in Sources */,
 				A00000000000000000000003 /* BandSteererApp.swift in Sources */,
 				A00000000000000000000004 /* CredentialStore.swift in Sources */,
@@ -377,7 +377,7 @@
 				CODE_SIGN_ENTITLEMENTS = BandSteerer/BandSteerer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
@@ -388,7 +388,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.4.0;
+				MARKETING_VERSION = 0.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = org.bandsteerer.BandSteerer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -409,7 +409,7 @@
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_CODE_COVERAGE = NO;
@@ -422,7 +422,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.4.0;
+				MARKETING_VERSION = 0.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = org.bandsteerer.BandSteerer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -507,7 +507,7 @@
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
 				kind = exactVersion;
-				version = 2.9.4;
+				version = 2.9.6;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

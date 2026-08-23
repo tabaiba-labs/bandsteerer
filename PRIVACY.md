@@ -12,15 +12,15 @@ BandSteerer reads these values from Apple’s CoreWLAN framework:
 
 The current SSID and radio details are held in memory and shown in the menu. Scan-result BSSIDs are used transiently to rank access points and are not retained in application state.
 
-After BandSteerer successfully applies an explicit band selected by the user, it stores the band and a SHA-256 identifier derived from the SSID in the app's standard local `UserDefaults`. This lets the preference survive app launches and Mac reboots without storing the plaintext SSID. Choosing Automatic removes that network's entry. These identifiers and preferences are not written to logs or sent to a network service.
+When the user turns on **Prefer 5 GHz**, BandSteerer stores the preference and a SHA-256 identifier derived from the SSID in the app's standard local `UserDefaults`. This lets the preference survive app launches and Mac reboots without storing the plaintext SSID. Turning the switch off removes that network's entry. These identifiers and preferences are not written to logs or sent to a network service.
 
-The **Reset Saved Preferences…** action in the About window removes all of these identifiers and band choices from `UserDefaults` and returns the current session to Automatic. It does not remove Wi-Fi credentials or change macOS network settings.
+The **Reset Saved Preferences…** action in the About window removes all of these identifiers and preferences from `UserDefaults` and turns off **Prefer 5 GHz** for the current session. It does not remove Wi-Fi credentials or change macOS network settings.
 
 BandSteerer creates a `CLLocationManager` only to request and observe authorization. It does not start location updates, request a location, or receive geographic coordinates. macOS requires the permission before CoreWLAN reveals SSID and BSSID information.
 
 ## Wi-Fi credentials
 
-When the user manually chooses a band on a password-protected personal network, BandSteerer may ask CoreWLAN to read that network’s existing password from the macOS user or system Keychain. macOS controls any authorization prompt.
+When the user turns on **Prefer 5 GHz** for a password-protected personal network, BandSteerer may ask CoreWLAN to read that network’s existing password from the macOS user or system Keychain. macOS controls any authorization prompt.
 
 After a successful association, BandSteerer saves a copy as a generic-password item in the user’s login Keychain:
 

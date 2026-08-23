@@ -13,44 +13,28 @@ struct MenuBarView: View {
   }
 
   var body: some View {
-    Group {
-      statusSection
+    VStack(spacing: 0) {
+      connectionHeader
+
+      Divider()
 
       if locationPermission.isAuthorized {
-        bandPicker
+        preferenceControl
       } else {
-        locationActions
+        permissionControl
+      }
+
+      if let message = model.message {
+        Divider()
+        messageView(message)
       }
 
       Divider()
 
-      Toggle(
-        "Open at Login",
-        isOn: Binding(
-          get: { model.launchAtLogin },
-          set: { model.setLaunchAtLogin($0) }
-        )
-      )
-
-      Divider()
-
-      Button("About BandSteerer") {
-        openWindow(id: "about")
-        NSApplication.shared.activate()
-      }
-
-      Button("Check for Updates…") {
-        updates.checkForUpdates()
-      }
-      .disabled(!updates.canCheckForUpdates)
-
-      Divider()
-
-      Button("Quit BandSteerer") {
-        model.quit()
-      }
-      .keyboardShortcut("q", modifiers: .command)
+      footer
     }
+    .frame(width: 320)
+    .fixedSize(horizontal: false, vertical: true)
     .onAppear {
       model.menuDidOpen()
     }
@@ -59,96 +43,100 @@ struct MenuBarView: View {
     }
   }
 
-  @ViewBuilder
-  private var statusSection: some View {
-    if !locationPermission.isAuthorized {
-      Section("Wi-Fi Access") {
-        locationPermissionExplanation
-      }
-    } else if model.isRecoveringFromWake {
-      Section(model.connection.ssid ?? "Reconnecting to Wi-Fi") {
-        Text("Checking the connection after wake…")
-      }
-    } else if model.connection.isConnected {
-      Section(networkTitle) {
-        if !connectionSummary.isEmpty {
-          Text(connectionSummary)
-        }
+  private var connectionHeader: some View {
+    HStack(spacing: 12) {
+      Image(systemName: connectionSystemImage)
+        .font(.system(size: 22, weight: .medium))
+        .symbolRenderingMode(.hierarchical)
+        .foregroundStyle(connectionSymbolColor)
+        .frame(width: 44, height: 44)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
 
-        if model.isWorking {
-          Text("Switching to \(model.preference.title)…")
-        } else if let desiredBand = model.preference.band,
-          model.connection.band != desiredBand
-        {
-          Text("Restoring \(model.preference.title)…")
-        } else if model.preference != .automatic {
-          Text("\(model.preference.title) preference active")
-        }
+      VStack(alignment: .leading, spacing: 3) {
+        Text(connectionTitle)
+          .font(.headline)
+          .lineLimit(1)
+
+        Text(connectionSubtitle)
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+          .lineLimit(2)
       }
-    } else if !model.connection.isInterfaceAvailable {
-      Section("Wi-Fi Unavailable") {
-        Text("BandSteerer couldn't read the Wi-Fi interface.")
-        Button("Refresh Status") {
-          model.menuDidOpen()
-        }
-      }
-    } else if model.connection.isPoweredOn {
-      Section("Not Connected") {
-        Text("Connect to Wi-Fi to choose a band.")
-      }
-    } else {
-      Section("Wi-Fi is Off") {
-        Text("Turn on Wi-Fi to choose a band.")
+
+      Spacer(minLength: 8)
+
+      if model.isRecoveringFromWake {
+        ProgressView()
+          .controlSize(.small)
+          .accessibilityLabel("Checking Wi-Fi after wake")
       }
     }
+    .padding(.horizontal, 16)
+    .padding(.top, 16)
+    .padding(.bottom, 14)
+  }
 
-    if let message = model.message {
-      Section {
-        Label(message, systemImage: "exclamationmark.triangle")
+  private var preferenceControl: some View {
+    HStack(alignment: .center, spacing: 14) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Prefer 5 GHz")
+          .font(.body.weight(.medium))
+
+        Text(preferenceDescription)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
       }
+
+      Spacer(minLength: 8)
+
+      if model.isWorking {
+        ProgressView()
+          .controlSize(.small)
+          .accessibilityLabel("Switching to 5 GHz")
+      }
+
+      Toggle(
+        "Prefer 5 GHz",
+        isOn: Binding(
+          get: { model.prefersFiveGHz },
+          set: { model.setFiveGHzPreference($0) }
+        )
+      )
+      .labelsHidden()
+      .toggleStyle(.switch)
+      .controlSize(.large)
+      .disabled(!model.connection.isConnected || model.isRecoveringFromWake)
     }
+    .padding(16)
+  }
+
+  private var permissionControl: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      locationPermissionExplanation
+
+      locationAction
+    }
+    .padding(16)
   }
 
   private var locationPermissionExplanation: some View {
-    let lines = locationPermissionExplanationLines
-
-    return ForEach(lines.indices, id: \.self) { index in
-      Text(lines[index])
+    VStack(alignment: .leading, spacing: 4) {
+      ForEach(locationPermissionExplanationLines.indices, id: \.self) { index in
+        Text(locationPermissionExplanationLines[index])
+          .font(index == 0 ? .body : .caption)
+          .foregroundStyle(index == 0 ? .primary : .secondary)
+      }
     }
-  }
-
-  private var locationPermissionExplanationLines: [LocalizedStringResource] {
-    if locationPermission.isUndetermined {
-      LocationPermissionMenuCopy.undetermined
-    } else if locationPermission.status == .restricted {
-      LocationPermissionMenuCopy.restricted
-    } else {
-      LocationPermissionMenuCopy.denied
-    }
-  }
-
-  private var bandPicker: some View {
-    Picker(
-      "Band preference",
-      selection: Binding(
-        get: { model.preference },
-        set: { model.select($0) }
-      )
-    ) {
-      Text("Automatic (macOS chooses)").tag(BandPreference.automatic)
-      Text("Prefer 2.4 GHz").tag(BandPreference.twoPointFour)
-      Text("Prefer 5 GHz").tag(BandPreference.five)
-    }
-    .pickerStyle(.inline)
-    .disabled(!model.connection.isConnected || model.isRecoveringFromWake)
   }
 
   @ViewBuilder
-  private var locationActions: some View {
+  private var locationAction: some View {
     if locationPermission.isUndetermined {
       Button("Allow Wi-Fi Access…") {
         model.requestLocationAccess()
       }
+      .buttonStyle(.borderedProminent)
     } else {
       Button("Open Location Settings…") {
         if let url = URL(
@@ -161,12 +149,152 @@ struct MenuBarView: View {
     }
   }
 
-  private var networkTitle: String {
-    "\(model.connection.ssid ?? "Wi-Fi") — \(model.connection.band.rawValue)"
+  private func messageView(_ message: String) -> some View {
+    HStack(alignment: .top, spacing: 8) {
+      Image(systemName: "exclamationmark.triangle.fill")
+        .foregroundStyle(.orange)
+
+      Text(message)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+  }
+
+  private var footer: some View {
+    HStack(spacing: 4) {
+      Button {
+        openWindow(id: "about")
+        NSApplication.shared.activate()
+      } label: {
+        Label("About BandSteerer", systemImage: "info.circle")
+          .labelStyle(.iconOnly)
+      }
+      .help("About BandSteerer")
+
+      Spacer()
+
+      Menu {
+        Toggle(
+          "Open at Login",
+          isOn: Binding(
+            get: { model.launchAtLogin },
+            set: { model.setLaunchAtLogin($0) }
+          )
+        )
+
+        Button("Check for Updates…") {
+          updates.checkForUpdates()
+        }
+        .disabled(!updates.canCheckForUpdates)
+
+        Divider()
+
+        Button("Quit BandSteerer") {
+          model.quit()
+        }
+        .keyboardShortcut("q", modifiers: .command)
+      } label: {
+        Label("More", systemImage: "ellipsis.circle")
+          .labelStyle(.iconOnly)
+      }
+      .menuStyle(.borderlessButton)
+      .help("More")
+    }
+    .buttonStyle(.borderless)
+    .controlSize(.large)
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+  }
+
+  private var connectionSystemImage: String {
+    if !locationPermission.isAuthorized || !model.connection.isInterfaceAvailable {
+      return "wifi.slash"
+    }
+    if model.isRecoveringFromWake || model.connection.isConnected {
+      return "wifi"
+    }
+    return model.connection.isPoweredOn ? "wifi.exclamationmark" : "wifi.slash"
+  }
+
+  private var connectionSymbolColor: Color {
+    if !locationPermission.isAuthorized || !model.connection.isInterfaceAvailable {
+      return .orange
+    }
+    if model.prefersFiveGHz, model.connection.isConnected {
+      return .accentColor
+    }
+    return .secondary
+  }
+
+  private var connectionTitle: String {
+    if !locationPermission.isAuthorized {
+      return "Wi-Fi access needed"
+    }
+    if model.isRecoveringFromWake {
+      return model.connection.ssid ?? "Reconnecting to Wi-Fi"
+    }
+    if model.connection.isConnected {
+      return model.connection.ssid ?? "Wi-Fi"
+    }
+    if !model.connection.isInterfaceAvailable {
+      return "Wi-Fi unavailable"
+    }
+    return model.connection.isPoweredOn ? "Not connected" : "Wi-Fi is off"
+  }
+
+  private var connectionSubtitle: String {
+    if !locationPermission.isAuthorized {
+      return "BandSteerer needs permission to identify this network."
+    }
+    if model.isRecoveringFromWake {
+      return "Checking the connection after wake…"
+    }
+    if model.connection.isConnected {
+      return connectionSummary
+    }
+    if !model.connection.isInterfaceAvailable {
+      return "BandSteerer couldn't read the Wi-Fi interface."
+    }
+    if model.connection.isPoweredOn {
+      return "Connect to Wi-Fi to set a 5 GHz preference."
+    }
+    return "Turn on Wi-Fi to set a 5 GHz preference."
+  }
+
+  private var preferenceDescription: String {
+    guard model.connection.isConnected else {
+      return model.connection.isPoweredOn
+        ? "Connect to Wi-Fi to set this preference."
+        : "Turn on Wi-Fi to set this preference."
+    }
+    if model.isWorking {
+      return "Switching this Mac to 5 GHz…"
+    }
+    if model.prefersFiveGHz, model.connection.band != .five {
+      return "Watching for this network's 5 GHz band."
+    }
+    if model.prefersFiveGHz {
+      return "BandSteerer will restore 5 GHz if macOS switches bands."
+    }
+    return "macOS chooses the Wi-Fi band automatically."
+  }
+
+  private var locationPermissionExplanationLines: [LocalizedStringResource] {
+    if locationPermission.isUndetermined {
+      LocationPermissionMenuCopy.undetermined
+    } else if locationPermission.status == .restricted {
+      LocationPermissionMenuCopy.restricted
+    } else {
+      LocationPermissionMenuCopy.denied
+    }
   }
 
   private var connectionSummary: String {
     [
+      model.connection.band.rawValue,
       model.connection.channel.map { "Channel \($0)" },
       model.connection.rssi.map { "Signal \($0) dBm" },
     ]

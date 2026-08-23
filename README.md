@@ -2,18 +2,14 @@
 
 [![CI](https://github.com/tabaiba-labs/bandsteerer/actions/workflows/ci.yml/badge.svg)](https://github.com/tabaiba-labs/bandsteerer/actions/workflows/ci.yml)
 
-BandSteerer is a native macOS menu-bar utility for choosing the 2.4 GHz or 5 GHz band of the Wi-Fi network you are already using. It is useful when one network name is broadcast by several access points or frequency bands and macOS has roamed to an unsuitable band.
-
-![BandSteerer menu with the 5 GHz preference active](docs/images/bandsteerer-menu.png)
+BandSteerer is a native macOS menu-bar utility that asks macOS to keep the Wi-Fi network you are already using on 5 GHz. It is useful when one network name is broadcast on several frequency bands and macOS has roamed to a slower band.
 
 ## Features
 
-- **Automatic** leaves Wi-Fi roaming to macOS.
-- **Prefer 2.4 GHz** associates with the strongest visible 2.4 GHz access point for the current network.
-- **Prefer 5 GHz** does the same for 5 GHz.
-- Successfully applied band preferences are remembered separately for each network across disconnects, app launches, and Mac reboots.
-- The menu-bar label shows an active band preference and makes corrections or unavailable Wi-Fi visible at a glance.
-- BandSteerer corrects a connection only when macOS moves to the wrong band. Moving between access points within the selected band requires no intervention.
+- A native **Prefer 5 GHz** switch controls the current network. Off leaves Wi-Fi roaming entirely to macOS.
+- The setting is remembered separately for each network across disconnects, app launches, and Mac reboots.
+- The menu-bar label shows when the 5 GHz preference is active and makes corrections or unavailable Wi-Fi visible at a glance.
+- BandSteerer corrects a connection only when macOS moves away from 5 GHz. Moving between 5 GHz access points requires no intervention.
 - Sleep pauses connection checks. After wake, the app waits for Wi-Fi to reconnect before restoring the preference for the same network.
 - **Open at Login** can restore saved preferences automatically after signing in.
 - A silent update check runs when the app starts and then once every 24 hours while it remains open. Available updates use the native Sparkle install and relaunch flow.
@@ -35,22 +31,21 @@ Download the latest DMG from [GitHub Releases](https://github.com/tabaiba-labs/b
 
 1. Open BandSteerer and click its Wi-Fi menu-bar icon.
 2. Choose **Allow Wi-Fi Access** and approve Location permission.
-3. Select **Prefer 2.4 GHz** or **Prefer 5 GHz** while connected to a supported network.
+3. Turn on **Prefer 5 GHz** while connected to a supported network.
 
-A successfully applied selection is remembered for that network. Choose **Automatic** to remove it.
-Use **About BandSteerer > Reset Saved Preferences…** to remove every saved band choice at once.
+The switch is remembered for that network. Turn it off to remove the preference, or use **About BandSteerer > Reset Saved Preferences…** to remove every saved network preference at once.
 
-On launch, BandSteerer restores a saved preference only when it can apply it without an authorization prompt. Otherwise it starts that network in Automatic mode and waits for you to choose a band, so macOS presents any required prompt in response to your action.
+On launch, BandSteerer restores a saved preference only when it can apply it without an authorization prompt. Otherwise the switch stays off until you turn it on, so macOS presents any required prompt in response to your action.
 
-On password-protected personal networks, macOS may show an authorization prompt when BandSteerer reads the password already saved in the Keychain. After a successful selection, the app stores a device-local Keychain copy so future corrections do not prompt repeatedly. BandSteerer never writes Wi-Fi passwords to files or logs.
+On password-protected personal networks, macOS may show an authorization prompt when BandSteerer reads the password already saved in the Keychain. After a successful connection, the app stores a device-local Keychain copy so future corrections do not prompt repeatedly. BandSteerer never writes Wi-Fi passwords to files or logs.
 
 ## Limitations
 
 BandSteerer requests a corrective association; it cannot disable macOS roaming at the driver level. macOS or the access point may move the connection temporarily, and reconnecting can briefly interrupt network traffic.
 
-Preferences are identified by network name. Two unrelated networks with exactly the same name therefore share one band preference.
+Preferences are identified by network name. Two unrelated networks with exactly the same name therefore share one 5 GHz preference.
 
-Open, OWE, and personal password-protected networks are supported. Enterprise Wi-Fi is not supported by the password-based association API used by the app. BandSteerer identifies 6 GHz connections in its status but currently offers preferences only for 2.4 GHz and 5 GHz.
+Open, OWE, and personal password-protected networks are supported. Enterprise Wi-Fi is not supported by the password-based association API used by the app. BandSteerer identifies 2.4 GHz and 6 GHz connections in its status but steers only toward 5 GHz.
 
 ## Build from source
 
@@ -65,7 +60,7 @@ Quit any installed copy before running from Xcode because BandSteerer allows onl
 
 ## Privacy and security
 
-Band preferences are stored locally using a SHA-256 identifier instead of the plaintext network name. Wi-Fi credentials remain in process memory or the macOS Keychain. SSIDs, BSSIDs, passwords, scan results, and geographic coordinates are never logged.
+5 GHz preferences are stored locally using a SHA-256 identifier instead of the plaintext network name. Wi-Fi credentials remain in process memory or the macOS Keychain. SSIDs, BSSIDs, passwords, scan results, and geographic coordinates are never logged.
 
 See [PRIVACY.md](PRIVACY.md) for data handling and [SECURITY.md](SECURITY.md) for vulnerability reporting.
 

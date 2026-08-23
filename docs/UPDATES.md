@@ -1,6 +1,6 @@
 # Publishing updates
 
-BandSteerer uses Sparkle 2.9.4. The app checks the static `appcast.xml` feed once at process launch and then on Sparkle's 24-hour schedule. A manual **Check for Updates…** action is also available in the menu. Downloads and installation use Sparkle's standard user interface.
+BandSteerer uses Sparkle 2.9.6. The app checks the static `appcast.xml` feed once at process launch and then on Sparkle's 24-hour schedule. A manual **Check for Updates…** action is also available in the menu. Downloads and installation use Sparkle's standard user interface.
 
 ## Trust model
 
@@ -39,11 +39,11 @@ Never use a repository path or shared cloud folder for that export.
    xcrun stapler validate /path/to/BandSteerer-VERSION.dmg
    ```
 
-5. Download the matching Sparkle 2.9.4 distribution from the official Sparkle release. Generate the signed appcast entry from the final stapled DMG at the repository root:
+5. Download the matching Sparkle 2.9.6 distribution from the official Sparkle release. Generate the signed appcast entry from the final stapled DMG at the repository root:
 
    ```sh
    scripts/generate-appcast.sh \
-     /path/to/Sparkle-2.9.4/bin/generate_appcast \
+     /path/to/Sparkle-2.9.6/bin/generate_appcast \
      VERSION \
      /path/to/BandSteerer-VERSION.dmg
    ```

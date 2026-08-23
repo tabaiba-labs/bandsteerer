@@ -1,9 +1,18 @@
+import AppKit
 import Foundation
 import Testing
 
 @testable import BandSteerer
 
 struct BandSteererTests {
+  @Test
+  func menuBarIconsHaveNativeStatusItemDimensions() throws {
+    let expectedSize = NSSize(width: 18, height: 18)
+
+    #expect(try #require(NSImage(named: "MenuBarIconOn")).size == expectedSize)
+    #expect(try #require(NSImage(named: "MenuBarIconOff")).size == expectedSize)
+  }
+
   @Test
   func checksForUpdatesOnLaunchWhenAutomaticChecksAreEnabled() {
     #expect(UpdateCheckPolicy.shouldCheckOnLaunch(automaticChecksEnabled: true))
@@ -47,7 +56,7 @@ struct BandSteererTests {
   }
 
   @Test
-  func locationPermissionMenuCopyUsesCompactNativeMenuRows() {
+  func locationPermissionCopyStaysCompactInNativePanel() {
     let variants = [
       LocationPermissionMenuCopy.undetermined,
       LocationPermissionMenuCopy.restricted,
@@ -62,37 +71,32 @@ struct BandSteererTests {
   }
 
   @Test
-  func choosesStrongestCandidateInRequestedBand() {
+  func choosesStrongestFiveGHzCandidate() {
     let candidates = [
-      NetworkCandidate(identifier: "2g", band: .twoPointFour, rssi: -30),
-      NetworkCandidate(identifier: "5g-weak", band: .five, rssi: -70),
-      NetworkCandidate(identifier: "5g-strong", band: .five, rssi: -54),
+      NetworkCandidate(identifier: "5g-weak", rssi: -70),
+      NetworkCandidate(identifier: "5g-strong", rssi: -54),
     ]
 
-    let selected = BandSelection.bestCandidate(for: .five, among: candidates)
+    let selected = FiveGHzSelection.strongestCandidate(among: candidates)
 
     #expect(selected?.identifier == "5g-strong")
   }
 
   @Test
-  func returnsNilWhenRequestedBandIsUnavailable() {
-    let candidates = [
-      NetworkCandidate(identifier: "2g", band: .twoPointFour, rssi: -30)
-    ]
-
-    #expect(BandSelection.bestCandidate(for: .five, among: candidates) == nil)
+  func returnsNilWhenFiveGHzIsUnavailable() {
+    #expect(FiveGHzSelection.strongestCandidate(among: []) == nil)
   }
 
   @Test
   func onlyTransientAssociationFailuresKeepPreferenceActive() {
     #expect(
       AssociationFailurePolicy.keepsPreferenceActive(
-        after: WiFiServiceError.noNetworkInBand(.five)
+        after: WiFiServiceError.noFiveGHzNetwork
       )
     )
     #expect(
       AssociationFailurePolicy.keepsPreferenceActive(
-        after: WiFiServiceError.verificationFailed(.five)
+        after: WiFiServiceError.verificationFailed
       )
     )
     #expect(
@@ -110,11 +114,11 @@ struct BandSteererTests {
   @Test
   func candidateTieBreakIsDeterministic() {
     let candidates = [
-      NetworkCandidate(identifier: "b", band: .five, rssi: -50),
-      NetworkCandidate(identifier: "a", band: .five, rssi: -50),
+      NetworkCandidate(identifier: "b", rssi: -50),
+      NetworkCandidate(identifier: "a", rssi: -50),
     ]
 
-    let selected = BandSelection.bestCandidate(for: .five, among: candidates)
+    let selected = FiveGHzSelection.strongestCandidate(among: candidates)
 
     #expect(selected?.identifier == "a")
   }
@@ -123,56 +127,56 @@ struct BandSteererTests {
   func preferenceSurvivesEventsForSameNetwork() {
     var session = SessionPolicy()
     session.observe(ssid: "Cafe")
-    session.select(.five)
+    session.setFiveGHzPreference(true)
 
     session.observe(ssid: "Cafe")
 
-    #expect(session.preference == .five)
+    #expect(session.prefersFiveGHz)
   }
 
   @Test
   func sessionRestoresSavedPreferenceWhenNetworkConnects() {
     var session = SessionPolicy()
 
-    session.observe(ssid: "Cafe", savedPreference: .five)
+    session.observe(ssid: "Cafe", savedPreferenceEnabled: true)
 
-    #expect(session.preference == .five)
+    #expect(session.prefersFiveGHz)
     #expect(session.ssid == "Cafe")
   }
 
   @Test
   func repeatedObservationDoesNotOverwriteActivePreference() {
     var session = SessionPolicy()
-    session.observe(ssid: "Cafe", savedPreference: .five)
+    session.observe(ssid: "Cafe", savedPreferenceEnabled: true)
 
-    session.observe(ssid: "Cafe", savedPreference: .automatic)
+    session.observe(ssid: "Cafe", savedPreferenceEnabled: false)
 
-    #expect(session.preference == .five)
+    #expect(session.prefersFiveGHz)
   }
 
   @Test
   func savedPreferenceFallsBackToAutomaticWhenApplyingItWouldPrompt() {
-    let preference = PreferenceRestorationPolicy.effectivePreference(
-      savedPreference: .five,
+    let shouldEnable = PreferenceRestorationPolicy.shouldEnableFiveGHz(
+      savedPreferenceEnabled: true,
       canApplyWithoutUserInteraction: false
     )
 
-    #expect(preference == .automatic)
+    #expect(!shouldEnable)
   }
 
   @Test
   func savedPreferenceRestoresWhenItCanBeAppliedWithoutPrompting() {
-    let preference = PreferenceRestorationPolicy.effectivePreference(
-      savedPreference: .five,
+    let shouldEnable = PreferenceRestorationPolicy.shouldEnableFiveGHz(
+      savedPreferenceEnabled: true,
       canApplyWithoutUserInteraction: true
     )
 
-    #expect(preference == .five)
+    #expect(shouldEnable)
     #expect(
-      PreferenceRestorationPolicy.effectivePreference(
-        savedPreference: .automatic,
+      !PreferenceRestorationPolicy.shouldEnableFiveGHz(
+        savedPreferenceEnabled: false,
         canApplyWithoutUserInteraction: false
-      ) == .automatic
+      )
     )
   }
 
@@ -180,11 +184,11 @@ struct BandSteererTests {
   func preferenceResetsWhenNetworkChanges() {
     var session = SessionPolicy()
     session.observe(ssid: "Cafe")
-    session.select(.five)
+    session.setFiveGHzPreference(true)
 
     session.observe(ssid: "Home")
 
-    #expect(session.preference == .automatic)
+    #expect(!session.prefersFiveGHz)
     #expect(session.ssid == "Home")
   }
 
@@ -192,11 +196,11 @@ struct BandSteererTests {
   func preferenceResetsOnDisconnect() {
     var session = SessionPolicy()
     session.observe(ssid: "Cafe")
-    session.select(.five)
+    session.setFiveGHzPreference(true)
 
     session.observe(ssid: nil)
 
-    #expect(session.preference == .automatic)
+    #expect(!session.prefersFiveGHz)
     #expect(session.ssid == nil)
   }
 
@@ -206,19 +210,19 @@ struct BandSteererTests {
     session.observe(ssid: "Cafe")
     #expect(!session.needsCorrection(for: .twoPointFour))
 
-    session.select(.five)
+    session.setFiveGHzPreference(true)
 
     #expect(session.needsCorrection(for: .twoPointFour))
     #expect(!session.needsCorrection(for: .five))
   }
 
   @Test
-  func cannotSelectBandWhileDisconnected() {
+  func cannotEnableFiveGHzPreferenceWhileDisconnected() {
     var session = SessionPolicy()
 
-    session.select(.five)
+    session.setFiveGHzPreference(true)
 
-    #expect(session.preference == .automatic)
+    #expect(!session.prefersFiveGHz)
   }
 
   @Test
@@ -227,26 +231,27 @@ struct BandSteererTests {
     let defaults = try #require(UserDefaults(suiteName: suiteName))
     defer { defaults.removePersistentDomain(forName: suiteName) }
 
-    BandPreferenceStore(defaults: defaults).set(.five, for: "Cafe")
-    let relaunchedStore = BandPreferenceStore(
+    FiveGHzPreferenceStore(defaults: defaults).setEnabled(true, for: "Cafe")
+    let relaunchedStore = FiveGHzPreferenceStore(
       defaults: try #require(UserDefaults(suiteName: suiteName))
     )
 
-    #expect(relaunchedStore.preference(for: "Cafe") == .five)
-    #expect(relaunchedStore.preference(for: "Home") == .automatic)
+    #expect(relaunchedStore.isEnabled(for: "Cafe"))
+    #expect(!relaunchedStore.isEnabled(for: "Home"))
   }
 
   @Test
-  func automaticClearsSavedPreference() throws {
+  func disablingClearsSavedPreference() throws {
     let suiteName = "org.bandsteerer.BandSteererTests.\(UUID().uuidString)"
     let defaults = try #require(UserDefaults(suiteName: suiteName))
     defer { defaults.removePersistentDomain(forName: suiteName) }
-    let store = BandPreferenceStore(defaults: defaults)
-    store.set(.twoPointFour, for: "Cafe")
+    let store = FiveGHzPreferenceStore(defaults: defaults)
+    store.setEnabled(true, for: "Cafe")
 
-    store.set(.automatic, for: "Cafe")
+    store.setEnabled(false, for: "Cafe")
 
-    #expect(store.preference(for: "Cafe") == .automatic)
+    #expect(!store.isEnabled(for: "Cafe"))
+    #expect(defaults.object(forKey: FiveGHzPreferenceStore.storageKey) == nil)
   }
 
   @Test
@@ -254,27 +259,28 @@ struct BandSteererTests {
     let suiteName = "org.bandsteerer.BandSteererTests.\(UUID().uuidString)"
     let defaults = try #require(UserDefaults(suiteName: suiteName))
     defer { defaults.removePersistentDomain(forName: suiteName) }
-    BandPreferenceStore(defaults: defaults).set(.five, for: "Private Network")
+    FiveGHzPreferenceStore(defaults: defaults).setEnabled(true, for: "Private Network")
 
     let saved = try #require(
-      defaults.dictionary(forKey: BandPreferenceStore.storageKey) as? [String: String]
+      defaults.dictionary(forKey: FiveGHzPreferenceStore.storageKey) as? [String: String]
     )
 
     #expect(saved["Private Network"] == nil)
-    #expect(saved[BandPreferenceStore.networkIdentifier(for: "Private Network")] == "five")
+    #expect(saved[FiveGHzPreferenceStore.networkIdentifier(for: "Private Network")] == "five")
   }
 
   @Test
-  func malformedSavedPreferenceFallsBackToAutomatic() throws {
+  func legacyTwoPointFourPreferenceMigratesToOff() throws {
     let suiteName = "org.bandsteerer.BandSteererTests.\(UUID().uuidString)"
     let defaults = try #require(UserDefaults(suiteName: suiteName))
     defer { defaults.removePersistentDomain(forName: suiteName) }
     defaults.set(
-      [BandPreferenceStore.networkIdentifier(for: "Cafe"): "unsupported"],
-      forKey: BandPreferenceStore.storageKey
+      [FiveGHzPreferenceStore.networkIdentifier(for: "Cafe"): "twoPointFour"],
+      forKey: FiveGHzPreferenceStore.storageKey
     )
 
-    #expect(BandPreferenceStore(defaults: defaults).preference(for: "Cafe") == .automatic)
+    #expect(!FiveGHzPreferenceStore(defaults: defaults).isEnabled(for: "Cafe"))
+    #expect(defaults.object(forKey: FiveGHzPreferenceStore.storageKey) == nil)
   }
 
   @Test
@@ -282,32 +288,31 @@ struct BandSteererTests {
     let suiteName = "org.bandsteerer.BandSteererTests.\(UUID().uuidString)"
     let defaults = try #require(UserDefaults(suiteName: suiteName))
     defer { defaults.removePersistentDomain(forName: suiteName) }
-    let store = BandPreferenceStore(defaults: defaults)
-    store.set(.five, for: "Cafe")
-    store.set(.twoPointFour, for: "Home")
+    let store = FiveGHzPreferenceStore(defaults: defaults)
+    store.setEnabled(true, for: "Cafe")
+    store.setEnabled(true, for: "Home")
 
     store.removeAll()
 
-    #expect(store.preference(for: "Cafe") == .automatic)
-    #expect(store.preference(for: "Home") == .automatic)
-    #expect(defaults.object(forKey: BandPreferenceStore.storageKey) == nil)
+    #expect(!store.isEnabled(for: "Cafe"))
+    #expect(!store.isEnabled(for: "Home"))
+    #expect(defaults.object(forKey: FiveGHzPreferenceStore.storageKey) == nil)
   }
 
   @Test
-  func menuBarPresentationShowsOnlyWiFiInAutomaticMode() {
+  func menuBarPresentationUsesOffIconInAutomaticMode() {
     let presentation = MenuBarPresentation(
       isLocationAuthorized: true,
       connection: connected(on: .five),
-      preference: .automatic,
+      prefersFiveGHz: false,
       isWorking: false,
       isRecoveringFromWake: false
     )
 
-    #expect(presentation.systemImage == "wifi")
-    #expect(presentation.bandText == nil)
+    #expect(presentation.iconAssetName == "MenuBarIconOff")
     #expect(
       String(localized: presentation.accessibilityLabel)
-        == "BandSteerer is using Automatic mode"
+        == "BandSteerer is using automatic Wi-Fi selection"
     )
   }
 
@@ -316,47 +321,32 @@ struct BandSteererTests {
     let presentation = MenuBarPresentation(
       isLocationAuthorized: true,
       connection: connected(on: .five),
-      preference: .automatic,
+      prefersFiveGHz: false,
       isWorking: false,
       isRecoveringFromWake: true
     )
 
-    #expect(presentation.systemImage == "wifi")
-    #expect(presentation.bandText == nil)
+    #expect(presentation.iconAssetName == "MenuBarIconOff")
     #expect(
       String(localized: presentation.accessibilityLabel)
-        == "BandSteerer is using Automatic mode"
+        == "BandSteerer is using automatic Wi-Fi selection"
     )
   }
 
   @Test
-  func menuBarPresentationShowsActiveBandWithUnits() {
-    let fiveGHz = MenuBarPresentation(
+  func menuBarPresentationUsesOnIconForActiveFiveGHzPreference() {
+    let presentation = MenuBarPresentation(
       isLocationAuthorized: true,
       connection: connected(on: .five),
-      preference: .five,
-      isWorking: false,
-      isRecoveringFromWake: false
-    )
-    let twoPointFourGHz = MenuBarPresentation(
-      isLocationAuthorized: true,
-      connection: connected(on: .twoPointFour),
-      preference: .twoPointFour,
+      prefersFiveGHz: true,
       isWorking: false,
       isRecoveringFromWake: false
     )
 
-    #expect(fiveGHz.systemImage == "wifi")
-    #expect(fiveGHz.bandText == "5 GHz")
+    #expect(presentation.iconAssetName == "MenuBarIconOn")
     #expect(
-      String(localized: fiveGHz.accessibilityLabel)
+      String(localized: presentation.accessibilityLabel)
         == "BandSteerer has the 5 GHz preference active"
-    )
-    #expect(twoPointFourGHz.systemImage == "wifi")
-    #expect(twoPointFourGHz.bandText == "2.4 GHz")
-    #expect(
-      String(localized: twoPointFourGHz.accessibilityLabel)
-        == "BandSteerer has the 2.4 GHz preference active"
     )
   }
 
@@ -365,25 +355,24 @@ struct BandSteererTests {
     let presentation = MenuBarPresentation(
       isLocationAuthorized: true,
       connection: connected(on: .twoPointFour),
-      preference: .five,
+      prefersFiveGHz: true,
       isWorking: false,
       isRecoveringFromWake: false
     )
     let switching = MenuBarPresentation(
       isLocationAuthorized: true,
       connection: connected(on: .five),
-      preference: .five,
+      prefersFiveGHz: true,
       isWorking: true,
       isRecoveringFromWake: false
     )
 
-    #expect(presentation.systemImage == "wifi.exclamationmark")
-    #expect(presentation.bandText == "5 GHz")
+    #expect(presentation.iconAssetName == "MenuBarIconOn")
     #expect(
       String(localized: presentation.accessibilityLabel)
         == "BandSteerer is restoring the 5 GHz preference"
     )
-    #expect(switching.systemImage == "wifi.exclamationmark")
+    #expect(switching.iconAssetName == "MenuBarIconOn")
   }
 
   @Test
@@ -391,22 +380,41 @@ struct BandSteererTests {
     let missingPermission = MenuBarPresentation(
       isLocationAuthorized: false,
       connection: connected(on: .five),
-      preference: .five,
+      prefersFiveGHz: true,
       isWorking: false,
       isRecoveringFromWake: false
     )
     let poweredOff = MenuBarPresentation(
       isLocationAuthorized: true,
       connection: WiFiConnection(isPoweredOn: false, isInterfaceAvailable: true),
-      preference: .automatic,
+      prefersFiveGHz: false,
+      isWorking: false,
+      isRecoveringFromWake: false
+    )
+    let interfaceUnavailable = MenuBarPresentation(
+      isLocationAuthorized: true,
+      connection: WiFiConnection(
+        ssid: "Cafe",
+        band: .five,
+        isPoweredOn: true,
+        isInterfaceAvailable: false
+      ),
+      prefersFiveGHz: true,
+      isWorking: false,
+      isRecoveringFromWake: false
+    )
+    let disconnected = MenuBarPresentation(
+      isLocationAuthorized: true,
+      connection: WiFiConnection(isPoweredOn: true, isInterfaceAvailable: true),
+      prefersFiveGHz: true,
       isWorking: false,
       isRecoveringFromWake: false
     )
 
-    #expect(missingPermission.systemImage == "wifi.slash")
-    #expect(missingPermission.bandText == nil)
-    #expect(poweredOff.systemImage == "wifi.slash")
-    #expect(poweredOff.bandText == nil)
+    #expect(missingPermission.iconAssetName == "MenuBarIconOff")
+    #expect(poweredOff.iconAssetName == "MenuBarIconOff")
+    #expect(interfaceUnavailable.iconAssetName == "MenuBarIconOff")
+    #expect(disconnected.iconAssetName == "MenuBarIconOff")
   }
 
   @Test

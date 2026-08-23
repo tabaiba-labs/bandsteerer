@@ -5,50 +5,14 @@ enum WiFiBand: String, Equatable, Sendable {
   case five = "5 GHz"
   case six = "6 GHz"
   case unknown = "Unknown"
-
-  var shortName: String {
-    switch self {
-    case .twoPointFour: "2.4"
-    case .five: "5"
-    case .six: "6"
-    case .unknown: "?"
-    }
-  }
-}
-
-enum BandPreference: String, CaseIterable, Identifiable, Sendable {
-  case automatic
-  case twoPointFour
-  case five
-
-  var id: Self { self }
-
-  var title: String {
-    switch self {
-    case .automatic: "Automatic"
-    case .twoPointFour: "2.4 GHz"
-    case .five: "5 GHz"
-    }
-  }
-
-  var band: WiFiBand? {
-    switch self {
-    case .automatic: nil
-    case .twoPointFour: .twoPointFour
-    case .five: .five
-    }
-  }
 }
 
 enum PreferenceRestorationPolicy {
-  static func effectivePreference(
-    savedPreference: BandPreference,
+  static func shouldEnableFiveGHz(
+    savedPreferenceEnabled: Bool,
     canApplyWithoutUserInteraction: Bool
-  ) -> BandPreference {
-    if savedPreference == .automatic || canApplyWithoutUserInteraction {
-      return savedPreference
-    }
-    return .automatic
+  ) -> Bool {
+    savedPreferenceEnabled && canApplyWithoutUserInteraction
   }
 }
 
@@ -66,68 +30,50 @@ struct WiFiConnection: Equatable, Sendable {
 }
 
 struct MenuBarPresentation: Equatable {
-  let systemImage: String
-  let bandText: String?
+  let iconAssetName: String
   let accessibilityLabel: LocalizedStringResource
 
   init(
     isLocationAuthorized: Bool,
     connection: WiFiConnection,
-    preference: BandPreference,
+    prefersFiveGHz: Bool,
     isWorking: Bool,
     isRecoveringFromWake: Bool
   ) {
-    let activeBandText = preference == .automatic ? nil : preference.title
+    let canShowActivePreference =
+      isLocationAuthorized && connection.isInterfaceAvailable && connection.isPoweredOn
+      && connection.isConnected
+    iconAssetName =
+      canShowActivePreference && prefersFiveGHz ? "MenuBarIconOn" : "MenuBarIconOff"
 
     if !isLocationAuthorized {
-      systemImage = "wifi.slash"
-      bandText = nil
       accessibilityLabel = "BandSteerer needs Location access"
     } else if !connection.isInterfaceAvailable {
-      systemImage = "wifi.slash"
-      bandText = nil
       accessibilityLabel = "BandSteerer cannot read the Wi-Fi interface"
     } else if !connection.isPoweredOn {
-      systemImage = "wifi.slash"
-      bandText = nil
       accessibilityLabel = "Wi-Fi is off"
     } else if !connection.isConnected {
-      systemImage = "wifi.slash"
-      bandText = nil
       accessibilityLabel = "Wi-Fi is not connected"
-    } else if preference == .automatic {
-      systemImage = "wifi"
-      bandText = nil
-      accessibilityLabel = "BandSteerer is using Automatic mode"
+    } else if !prefersFiveGHz {
+      accessibilityLabel = "BandSteerer is using automatic Wi-Fi selection"
     } else if isRecoveringFromWake {
-      systemImage = "wifi.exclamationmark"
-      bandText = activeBandText
       accessibilityLabel = "BandSteerer is checking Wi-Fi after wake"
-    } else if isWorking || preference.band != connection.band {
-      systemImage = "wifi.exclamationmark"
-      bandText = activeBandText
-      accessibilityLabel = "BandSteerer is restoring the \(preference.title) preference"
+    } else if isWorking || connection.band != .five {
+      accessibilityLabel = "BandSteerer is restoring the 5 GHz preference"
     } else {
-      systemImage = "wifi"
-      bandText = activeBandText
-      accessibilityLabel = "BandSteerer has the \(preference.title) preference active"
+      accessibilityLabel = "BandSteerer has the 5 GHz preference active"
     }
   }
 }
 
 struct NetworkCandidate: Equatable, Sendable {
   let identifier: String
-  let band: WiFiBand
   let rssi: Int
 }
 
-enum BandSelection {
-  static func bestCandidate(
-    for band: WiFiBand,
-    among candidates: [NetworkCandidate]
-  ) -> NetworkCandidate? {
+enum FiveGHzSelection {
+  static func strongestCandidate(among candidates: [NetworkCandidate]) -> NetworkCandidate? {
     candidates
-      .filter { $0.band == band }
       .max { lhs, rhs in
         if lhs.rssi == rhs.rssi {
           lhs.identifier > rhs.identifier
@@ -169,27 +115,22 @@ enum WakeRecoveryPolicy {
 
 struct SessionPolicy: Equatable, Sendable {
   private(set) var ssid: String?
-  private(set) var preference: BandPreference = .automatic
+  private(set) var prefersFiveGHz = false
 
   mutating func observe(
     ssid newSSID: String?,
-    savedPreference: BandPreference = .automatic
+    savedPreferenceEnabled: Bool = false
   ) {
     guard newSSID != ssid else { return }
     ssid = newSSID
-    preference = newSSID == nil ? .automatic : savedPreference
+    prefersFiveGHz = newSSID != nil && savedPreferenceEnabled
   }
 
-  mutating func select(_ newPreference: BandPreference) {
-    guard ssid != nil else {
-      preference = .automatic
-      return
-    }
-    preference = newPreference
+  mutating func setFiveGHzPreference(_ enabled: Bool) {
+    prefersFiveGHz = ssid != nil && enabled
   }
 
   func needsCorrection(for currentBand: WiFiBand) -> Bool {
-    guard let desiredBand = preference.band else { return false }
-    return currentBand != desiredBand
+    prefersFiveGHz && currentBand != .five
   }
 }

@@ -12,7 +12,7 @@ final class AppModel: NSObject, ObservableObject {
   )
 
   @Published private(set) var connection = WiFiConnection.disconnected
-  @Published private(set) var preference: BandPreference = .automatic
+  @Published private(set) var prefersFiveGHz = false
   @Published private(set) var isWorking = false
   @Published private(set) var isRecoveringFromWake = false
   @Published private(set) var message: String?
@@ -21,7 +21,7 @@ final class AppModel: NSObject, ObservableObject {
   let locationPermission = LocationPermission()
 
   private let service: WiFiService
-  private let preferenceStore: BandPreferenceStore
+  private let preferenceStore: FiveGHzPreferenceStore
   private let pathMonitor = NWPathMonitor(requiredInterfaceType: .wifi)
   private let pathMonitorQueue = DispatchQueue(
     label: "\(AppIdentity.bundleIdentifier).network-path",
@@ -42,7 +42,7 @@ final class AppModel: NSObject, ObservableObject {
 
   init(
     service: WiFiService = WiFiService(),
-    preferenceStore: BandPreferenceStore = BandPreferenceStore()
+    preferenceStore: FiveGHzPreferenceStore = FiveGHzPreferenceStore()
   ) {
     self.service = service
     self.preferenceStore = preferenceStore
@@ -76,7 +76,7 @@ final class AppModel: NSObject, ObservableObject {
     MenuBarPresentation(
       isLocationAuthorized: locationPermission.isAuthorized,
       connection: connection,
-      preference: preference,
+      prefersFiveGHz: prefersFiveGHz,
       isWorking: isWorking,
       isRecoveringFromWake: isRecoveringFromWake
     )
@@ -86,15 +86,15 @@ final class AppModel: NSObject, ObservableObject {
     locationPermission.request()
   }
 
-  func select(_ newPreference: BandPreference) {
+  func setFiveGHzPreference(_ enabled: Bool) {
     guard connection.isConnected, let ssid = session.ssid else { return }
-    session.select(newPreference)
-    preference = session.preference
+    session.setFiveGHzPreference(enabled)
+    prefersFiveGHz = session.prefersFiveGHz
+    preferenceStore.setEnabled(enabled, for: ssid)
     clearMessage()
     correctionTask?.cancel()
 
-    guard let desiredBand = newPreference.band else {
-      preferenceStore.set(.automatic, for: ssid)
+    guard enabled else {
       cancelAssociation()
       stopPreferenceMonitoring()
       resetCorrectionBackoff()
@@ -103,7 +103,7 @@ final class AppModel: NSObject, ObservableObject {
 
     resetCorrectionBackoff()
     startPreferenceMonitoring()
-    associate(with: desiredBand, automatic: false)
+    associate(automatic: false)
   }
 
   func setLaunchAtLogin(_ enabled: Bool) {
@@ -122,8 +122,8 @@ final class AppModel: NSObject, ObservableObject {
 
   func resetSavedPreferences() {
     preferenceStore.removeAll()
-    session.select(.automatic)
-    preference = .automatic
+    session.setFiveGHzPreference(false)
+    prefersFiveGHz = false
     correctionTask?.cancel()
     cancelAssociation()
     stopPreferenceMonitoring()
@@ -154,12 +154,12 @@ final class AppModel: NSObject, ObservableObject {
     if !isAssociating {
       let previousSSID = session.ssid
       if previousSSID != updatedConnection.ssid {
-        let savedPreference =
+        let savedPreferenceEnabled =
           updatedConnection.ssid.map {
-            preferenceStore.preference(for: $0)
-          } ?? .automatic
+            preferenceStore.isEnabled(for: $0)
+          } ?? false
         let canApplyWithoutUserInteraction: Bool
-        if savedPreference == .automatic {
+        if !savedPreferenceEnabled {
           canApplyWithoutUserInteraction = true
         } else if let ssid = updatedConnection.ssid {
           canApplyWithoutUserInteraction =
@@ -167,17 +167,20 @@ final class AppModel: NSObject, ObservableObject {
         } else {
           canApplyWithoutUserInteraction = false
         }
-        let effectivePreference = PreferenceRestorationPolicy.effectivePreference(
-          savedPreference: savedPreference,
+        let shouldEnableFiveGHz = PreferenceRestorationPolicy.shouldEnableFiveGHz(
+          savedPreferenceEnabled: savedPreferenceEnabled,
           canApplyWithoutUserInteraction: canApplyWithoutUserInteraction
         )
-        session.observe(ssid: updatedConnection.ssid, savedPreference: effectivePreference)
+        session.observe(
+          ssid: updatedConnection.ssid,
+          savedPreferenceEnabled: shouldEnableFiveGHz
+        )
         await service.clearCachedPasswords()
         clearMessage()
         resetCorrectionBackoff()
       }
-      preference = session.preference
-      if preference == .automatic {
+      prefersFiveGHz = session.prefersFiveGHz
+      if !prefersFiveGHz {
         stopPreferenceMonitoring()
       } else if previousSSID != session.ssid {
         startPreferenceMonitoring()
@@ -188,11 +191,10 @@ final class AppModel: NSObject, ObservableObject {
     guard updatedConnection.isConnected,
       session.needsCorrection(for: updatedConnection.band),
       !isAssociating,
-      Date() >= nextCorrectionAttempt,
-      let desiredBand = session.preference.band
+      Date() >= nextCorrectionAttempt
     else { return }
 
-    scheduleCorrection(to: desiredBand)
+    scheduleCorrection()
   }
 
   private func observeWorkspaceLifecycle() {
@@ -268,7 +270,7 @@ final class AppModel: NSObject, ObservableObject {
       await apply(updatedConnection)
       sleepingSessionSSID = nil
 
-      if resumedSameSession, preference != .automatic {
+      if resumedSameSession, prefersFiveGHz {
         startPreferenceMonitoring()
       }
 
@@ -290,7 +292,7 @@ final class AppModel: NSObject, ObservableObject {
         }
         guard !Task.isCancelled, let self else { return }
         await refreshFromService()
-        guard preference != .automatic else { return }
+        guard prefersFiveGHz else { return }
       }
     }
   }
@@ -300,16 +302,16 @@ final class AppModel: NSObject, ObservableObject {
     monitoringTask = nil
   }
 
-  private func scheduleCorrection(to band: WiFiBand) {
+  private func scheduleCorrection() {
     correctionTask?.cancel()
     correctionTask = Task { [weak self] in
       try? await Task.sleep(for: .seconds(2))
       guard !Task.isCancelled else { return }
-      self?.associate(with: band, automatic: true)
+      self?.associate(automatic: true)
     }
   }
 
-  private func associate(with band: WiFiBand, automatic: Bool) {
+  private func associate(automatic: Bool) {
     cancelAssociation()
     let generation = associationGeneration
     associationTask = Task { [weak self] in
@@ -325,14 +327,13 @@ final class AppModel: NSObject, ObservableObject {
       }
 
       do {
-        let updatedConnection = try await service.associate(
-          with: band,
+        let updatedConnection = try await service.associateWithFiveGHz(
           allowSystemKeychainAccess: !automatic
         )
         try Task.checkCancellation()
         guard associationGeneration == generation else { return }
-        if let ssid = session.ssid, session.preference.band == band {
-          preferenceStore.set(session.preference, for: ssid)
+        if let ssid = session.ssid, session.prefersFiveGHz {
+          preferenceStore.setEnabled(true, for: ssid)
         }
         connection = updatedConnection
         clearMessage()
@@ -345,11 +346,11 @@ final class AppModel: NSObject, ObservableObject {
         let keepsPreferenceActive = AssociationFailurePolicy.keepsPreferenceActive(after: error)
         if !keepsPreferenceActive {
           let failedSSID = session.ssid
-          session.select(.automatic)
-          preference = .automatic
+          session.setFiveGHzPreference(false)
+          prefersFiveGHz = false
           stopPreferenceMonitoring()
           if let failedSSID {
-            preferenceStore.set(.automatic, for: failedSSID)
+            preferenceStore.setEnabled(false, for: failedSSID)
           }
         }
         if !automatic || !keepsPreferenceActive {
